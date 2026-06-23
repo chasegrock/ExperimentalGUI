@@ -85,6 +85,18 @@ stimulation timing is controlled by an Arduino Uno running
 not change the serial command protocol in MATLAB controllers without
 re-uploading compatible Arduino firmware.
 
+**H-reflex timing contract** — the Arduino owns the precise
+50%-single-stance pulse timing: it runs its own gait state machine and
+fires locally. The MATLAB controller (`NirsHreflexOpenLoopWithAudio`)
+only sends a per-stride gate byte (`1` = stim left, `2` = stim right)
+and must send it at single-stance onset, NOT at mid-stance. Sending
+late leaves too little margin before the Arduino's 50% trigger and
+causes missed or mistimed stims. Keep display work off the control
+loop's hot path: `drawnow limitrate`, one reusable `animatedline` per
+leg (not a new `plot` per stride), and time-throttled textbox/`set`
+updates. Per-iteration loop timing and gate lead time are logged to the
+additive `datlog.diagnostics` field for validation.
+
 **NirsAutomaticityProtocol**, **Perceptual Adaptation**, and **Weber
 Perception** — completed; data collection and processing finished.
 Shuqi Liu led NirsAutomaticityProtocol; Marcela Gonzalez-Rubio led
