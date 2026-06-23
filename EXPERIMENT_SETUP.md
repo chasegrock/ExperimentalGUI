@@ -63,6 +63,15 @@ H-reflex stimulation requires an Arduino Uno running the firmware in
 complete upload procedure, hardware wiring, and pre-experiment
 checklist.
 
+H-reflex timing is split between MATLAB and the Arduino: the Arduino
+owns the precise 50%-single-stance pulse timing, and
+`NirsHreflexOpenLoopWithAudio` sends a per-stride gate byte at
+single-stance onset (the previous mid-stance send caused missed/mistimed
+stims and was fixed, MATLAB-only). See
+[studies/SpinalAdapt/README.md](studies/SpinalAdapt/README.md) for the
+timing contract and the validation checklist to run before resuming
+collection.
+
 Overground (OG) baseline trials use `HreflexOGWithAudio` (menu slot
 16). The speed feedback range in that controller must be adjusted
 manually between participants because the comfortable overground
