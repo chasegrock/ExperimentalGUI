@@ -38,6 +38,12 @@ delegating gait-event detection to the Arduino.
 4. Each stride, MATLAB sends command `1` (stimulate left) or `2` (stimulate
    right) to gate whether stimulation is delivered on that stride. If no command
    is sent, the Arduino does not stimulate even if the timing condition is met.
+   **The Arduino owns the precise 50%-single-stance timing**, so MATLAB should
+   send this gate byte at *single-stance onset* (early in the stride), not at
+   mid-stance: the latch (`shouldStimL/R`) is held until the Arduino reaches
+   its 50% trigger and fires. Sending the gate late (e.g., waiting until
+   mid-stance in MATLAB) leaves too little margin before the trigger and causes
+   missed or mistimed stims under MATLAB control-loop jitter.
 5. MATLAB sends command `3` to stop the state machine at trial end.
 
 ### MATLAB-Driven Mode (`Dual_Stim_Matlab`)
