@@ -620,7 +620,12 @@ try     % so that if something fails, communications are closed properly
                 shouldStimL = mod(LstepCount,stimInterval) == 4;
             end
 
-            if (shouldStimR && phase == 2 && canStim && (timeSinceLTO >= 0.80*stimDelayR))
+            % Send the gate at single-stance onset: the Arduino owns the
+            % precise 50%-single-stance timing, so MATLAB only needs to flag
+            % the stride early. Waiting until mid-stance (the old
+            % timeSinceLTO >= 0.80*stimDelayR gate) left too little margin and
+            % caused late or missed stims under control-loop jitter.
+            if (shouldStimR && phase == 2 && canStim)
                 % if (~mod(RstepCount,stimInterval) && phase == 2 && canStim &&
                 % timeSinceHS >= 0.8*stimDelayR(RstepCount)) % single stance R detected & estimated in mid stance already (from stimDelay).%Hreflex Alt Sol.
                 if isCalibration && RstepCount <= initStep2SkipForCalib %don't stimulate the first 5 strides, give participants time to settle in.
@@ -648,7 +653,9 @@ try     % so that if something fails, communications are closed properly
             timeSinceRTO = now - RTOTime(RstepCount);
             % Changed to using ONLY RstepCount to force stimulation order
             % of left and right within one stride
-            if (shouldStimL && phase == 1 && canStim && (timeSinceRTO >= 0.80*stimDelayL))
+            % See note above: flag left-leg stim at single-stance onset and
+            % let the Arduino time the 50%-single-stance pulse.
+            if (shouldStimL && phase == 1 && canStim)
                 % if (~mod(LstepCount,stimInterval) && phase == 1 && canStim && timeSinceHS >= 0.8*stimDelayL(LstepCount)) % single L detected & estimated in mid stance already (from stimDelay)%Hreflex Alt Sol.
                 if isCalibration && RstepCount <= initStep2SkipForCalib %don't stimulate the first 5 strides, give participants time to settle in.
                     continue;
