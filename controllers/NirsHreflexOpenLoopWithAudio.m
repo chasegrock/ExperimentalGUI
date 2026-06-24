@@ -404,6 +404,18 @@ try     % so that if something fails, communications are closed properly
         prevChangeTime = datetime('now');
     end
     tic;
+    lastUIUpdate = now;     % last time belt-speed textboxes were refreshed
+    handrailHigh = false;   % current handrail-force warning color state
+    % Reusable per-leg marker lines: append a point per heel strike via
+    % addpoints instead of creating a new plot object every stride (which
+    % accumulated thousands of objects and inflated drawnow within a trial).
+    % profileaxes has hold on and legend AutoUpdate off (see manualLoadProfile)
+    hAnimMarkR = animatedline(ghandle.profileaxes,'LineStyle','none', ...
+        'Marker','o','MarkerFaceColor',[1 0.6 0.78], ...
+        'MarkerEdgeColor','r');
+    hAnimMarkL = animatedline(ghandle.profileaxes,'LineStyle','none', ...
+        'Marker','o','MarkerFaceColor',[0.68 0.92 1], ...
+        'MarkerEdgeColor','b');
 
     while ~STOP     % only runs if stop button is not pressed
         while PAUSE % only runs if pause button is pressed
@@ -422,7 +434,7 @@ try     % so that if something fails, communications are closed properly
             old_velR.Value = 1; % change the old values so that the treadmill knows to resume when the pause button is resumed
             old_velL.Value = 1;
         end
-        drawnow;
+        drawnow limitrate;      % throttle redraws; still flushes UI callbacks
         old_stanceL = new_stanceL;
         old_stanceR = new_stanceR;
 
@@ -439,8 +451,12 @@ try     % so that if something fails, communications are closed properly
         end
 
         datlog.TreadmillCommands.read(frameind.Value,:) = [RBS,LBS,read_theta,now];%record the read
-        set(ghandle.RBeltSpeed_textbox,'String',num2str(RBS/1000));
-        set(ghandle.LBeltSpeed_textbox,'String',num2str(LBS/1000));
+        % throttle textbox refresh to limit per-iteration graphics work
+        if (now - lastUIUpdate)*86400 > 0.1     % refresh at ~10 Hz
+            set(ghandle.RBeltSpeed_textbox,'String',num2str(RBS/1000));
+            set(ghandle.LBeltSpeed_textbox,'String',num2str(LBS/1000));
+            lastUIUpdate = now;
+        end
         frameind.Value = frameind.Value + 1;
 
         % assuming there is only 1 subject, and that I care about a marker called MarkerA (e.g. Subject=Wand)
@@ -451,11 +467,14 @@ try     % so that if something fails, communications are closed properly
         Hy = MyClient.GetDeviceOutputValue('Handrail','Fy');
         Hz = MyClient.GetDeviceOutputValue('Handrail','Fz');
         Hm = sqrt(Hx.Value^2+Hy.Value^2+Hz.Value^2);
-        %if handrail force is too high, notify the experimentor
-        if (Hm > 25)
+        %if handrail force is too high, notify the experimentor; only update
+        %the color on a state change to avoid dirtying the figure every loop
+        if (Hm > 25) && ~handrailHigh
             set(ghandle.figure1,'Color',[238 5 5]./255);
-        else
+            handrailHigh = true;
+        elseif (Hm <= 25) && handrailHigh
             set(ghandle.figure1,'Color',[1 1 1]);
+            handrailHigh = false;
         end
 
         %% This section was on
@@ -521,7 +540,8 @@ try     % so that if something fails, communications are closed properly
                     stimDelayL = estSSL * percentSS2Stim;
                     set(ghandle.Right_step_textbox,'String',num2str(RstepCount-1));
                     % plot cursor
-                    plot(ghandle.profileaxes,RstepCount-1,velR(RstepCount,1)/1000,'o','MarkerFaceColor',[1 0.6 0.78],'MarkerEdgeColor','r');
+                    addpoints(hAnimMarkR,RstepCount-1, ...
+                        velR(RstepCount,1)/1000);
                     % drawnow;
                     canStim = true; % allow stim after HS and start timer
                     tic;
@@ -553,7 +573,8 @@ try     % so that if something fails, communications are closed properly
                     stimDelayR = estSSR * percentSS2Stim;
                     set(ghandle.Left_step_textbox,'String',num2str(LstepCount-1));
                     % plot cursor
-                    plot(ghandle.profileaxes,LstepCount-1,velL(LstepCount,1)/1000,'o','MarkerFaceColor',[0.68 .92 1],'MarkerEdgeColor','b');
+                    addpoints(hAnimMarkL,LstepCount-1, ...
+                        velL(LstepCount,1)/1000);
                     % drawnow;
                     canStim = true; % allow stim after HS and start timer
                     tic;
