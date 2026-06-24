@@ -87,11 +87,18 @@ re-uploading compatible Arduino firmware.
 
 **H-reflex timing contract** — the Arduino owns the precise
 50%-single-stance pulse timing: it runs its own gait state machine and
-fires locally. The MATLAB controller (`NirsHreflexOpenLoopWithAudio`)
-only sends a per-stride gate byte (`1` = stim left, `2` = stim right)
-and must send it at single-stance onset, NOT at mid-stance. Sending
-late leaves too little margin before the Arduino's 50% trigger and
-causes missed or mistimed stims. Keep display work off the control
+fires locally. The MATLAB controller (`NirsHreflexArduinoOpenLoopWithAudio`)
+sends serial command `0` once before the main loop to start the
+Arduino's state machine, and command `3` in the closing routine to stop
+it; do not change this handshake without re-uploading compatible Arduino
+firmware. Per stride, MATLAB only sends a gate byte (`1` = stim left,
+`2` = stim right) and must send it at single-stance onset, NOT at
+mid-stance. Sending late leaves too little margin before the Arduino's
+50% trigger and causes missed or mistimed stims. The deprecated
+`NirsHreflexOpenLoopWithAudio` (now in `controllers/Deprecated/`) pairs
+with the alternative `Dual_Stim_Matlab.ino` firmware, which has no
+on-board gait detection — keep it only as a fallback for that
+fully-MATLAB-timed mode. Keep display work off the control
 loop's hot path: `drawnow limitrate`, one reusable `animatedline` per
 leg (not a new `plot` per stride), and time-throttled textbox/`set`
 updates. Per-iteration loop timing and gate lead time are logged to the
