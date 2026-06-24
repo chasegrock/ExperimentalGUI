@@ -404,6 +404,7 @@ try     % so that if something fails, communications are closed properly
         prevChangeTime = datetime('now');
     end
     tic;
+    loopCount = 0;          % number of completed main-loop iterations
     lastUIUpdate = now;     % last time belt-speed textboxes were refreshed
     handrailHigh = false;   % current handrail-force warning color state
     % Reusable per-leg marker lines: append a point per heel strike via
@@ -434,7 +435,11 @@ try     % so that if something fails, communications are closed properly
             old_velR.Value = 1; % change the old values so that the treadmill knows to resume when the pause button is resumed
             old_velL.Value = 1;
         end
+        tIter = tic;            % start per-iteration loop timer
+        tSeg = tic;
         drawnow limitrate;      % throttle redraws; still flushes UI callbacks
+        segGuiMs = toc(tSeg)*1000;
+        tSeg = tic;
         old_stanceL = new_stanceL;
         old_stanceR = new_stanceR;
 
@@ -488,6 +493,8 @@ try     % so that if something fails, communications are closed properly
             end
         end
         %%
+        segViconMs = toc(tSeg)*1000;    % Vicon read + interop segment
+        tSeg = tic;                     % start control + stim segment
         % read from treadmill
         % [RBS,LBS,theta] = getCurrentData(t);
         % set(ghandle.LBeltSpeed_textbox,'String',num2str(LBS/1000));
