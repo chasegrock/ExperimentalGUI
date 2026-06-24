@@ -248,6 +248,14 @@ datlog.audioCues.audio_instruction_message = {};
 datlog.stim.header = {'Step#','StimDelayTarget(SerialDate#)','TimeSinceContraTOSerialDate#)'};
 datlog.stim.L = [];
 datlog.stim.R = [];
+% Loop-timing diagnostics (additive; NOT consumed by labTools/SyncDatalog).
+% loopSegMs columns: [iterTotal, drawnow/GUI, Vicon read+interop, control+
+% stim], all in ms. gateLeadMs* record (send time - single-stance onset),
+% i.e., how early MATLAB flagged the stride to the Arduino, in ms.
+datlog.diagnostics.header = {'iterTotalMs','guiMs','viconMs','ctrlMs'};
+datlog.diagnostics.loopSegMs = zeros(300*length(velR)+7200,4);
+datlog.diagnostics.gateLeadMsL = [];
+datlog.diagnostics.gateLeadMsR = [];
 
 %do initial save
 try
@@ -611,6 +619,8 @@ try     % so that if something fails, communications are closed properly
                 end
                 canStim = false;
                 datlog.stim.R(end+1,:) = [RstepCount, stimDelayR, timeSinceLTO];
+                datlog.diagnostics.gateLeadMsR(end+1) = ...
+                    timeSinceLTO*86400000;  % gate lead from LTO (ms)
             end
 
             % use contralateral leg (i.e., RHS - RTO) to determine L mid-single stance
@@ -637,6 +647,8 @@ try     % so that if something fails, communications are closed properly
 
                 canStim = false;    % prevent immediate stimulation
                 datlog.stim.L(end+1,:) = [RstepCount, stimDelayL, timeSinceRTO];
+                datlog.diagnostics.gateLeadMsL(end+1) = ...
+                    timeSinceRTO*86400000;  % gate lead from RTO (ms)
             end
         end
 
@@ -814,7 +826,15 @@ try     % so that if something fails, communications are closed properly
             need2LogEvent = true;
             nextRestIdx = nextRestIdx + 1;
         end
+
+        % record per-iteration loop-timing diagnostics (additive)
+        loopCount = loopCount + 1;
+        datlog.diagnostics.loopSegMs(loopCount,:) = ...
+            [toc(tIter)*1000, segGuiMs, segViconMs, toc(tSeg)*1000];
     end %While, when STOP button is pressed
+
+    % trim unused preallocated diagnostic rows
+    datlog.diagnostics.loopSegMs(loopCount+1:end,:) = [];
 
     if STOP
         % datlog.messages{end+1} = ['Stop button pressed at: ' num2str(now) ' ,stopping... '];
