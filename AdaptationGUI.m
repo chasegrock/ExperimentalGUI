@@ -527,9 +527,9 @@ switch(selection)
         global numAudioCountDown %Added by Shuqi 1/19/2022, default [-1], only count down at TM start and end
         global isCalibration %Added by SL 5/7/2024, default false, not a calibration trial
         if exist('stimL','var') && exist('stimR','var')
-            [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = NirsHreflexOpenLoopWithAudio(round(velL*1000), round(velR*1000), forceThreshold, shortName, numAudioCountDown, isCalibration, true, true, stimL,stimR);
+            [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = NirsHreflexArduinoOpenLoopWithAudio(round(velL*1000), round(velR*1000), forceThreshold, shortName, numAudioCountDown, isCalibration, true, true, stimL,stimR);
         else
-            [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = NirsHreflexOpenLoopWithAudio(round(velL*1000), round(velR*1000), forceThreshold, shortName, numAudioCountDown, isCalibration, true, true);
+            [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = NirsHreflexArduinoOpenLoopWithAudio(round(velL*1000), round(velR*1000), forceThreshold, shortName, numAudioCountDown, isCalibration, true, true);
         end
         
     case 15 % Perceptual trial ends when a click is recorded but the task length is determined by time

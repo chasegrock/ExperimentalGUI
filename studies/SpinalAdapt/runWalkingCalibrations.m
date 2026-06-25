@@ -7,7 +7,7 @@ isCalibBtn = questdlg(['Do you want to run a Hreflex walking ' ...
     'calibration trial?']);
 if strcmp(isCalibBtn,'Yes') % run dynamic (i.e., walking) calibration
     isCalibration = true;
-    handles.popupmenu2.set('Value',14)  % NirsHreflexOpenLoopWithAudio
+    handles.popupmenu2.set('Value',14)  % NirsHreflexArduinoOpenLoopWithAudio
     opts.Interpreter = 'tex';
     opts.Default = 'Slow';
     profileToGen = questdlg(['What TM speed to calibrate on? (Default is slow)'],...
