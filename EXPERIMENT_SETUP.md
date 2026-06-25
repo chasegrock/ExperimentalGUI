@@ -65,9 +65,10 @@ checklist.
 
 H-reflex timing is split between MATLAB and the Arduino: the Arduino
 owns the precise 50%-single-stance pulse timing, and
-`NirsHreflexOpenLoopWithAudio` sends a per-stride gate byte at
+`NirsHreflexArduinoOpenLoopWithAudio` sends a per-stride gate byte at
 single-stance onset (the previous mid-stance send caused missed/mistimed
-stims and was fixed, MATLAB-only). See
+stims and was fixed, MATLAB-only). It also sends the start (`0`)/stop
+(`3`) handshake that runs the Arduino's state machine. See
 [studies/SpinalAdapt/README.md](studies/SpinalAdapt/README.md) for the
 timing contract and the validation checklist to run before resuming
 collection.
@@ -75,8 +76,8 @@ collection.
 Overground (OG) baseline trials use `HreflexOGWithAudio` (menu slot
 16). The speed feedback range in that controller must be adjusted
 manually between participants because the comfortable overground
-walking speed varies. Calibration trials use `NirsHreflexOpenLoopWithAudio`
-(menu slot 14).
+walking speed varies. Calibration trials use
+`NirsHreflexArduinoOpenLoopWithAudio` (menu slot 14).
 
 ---
 
@@ -103,7 +104,7 @@ for reference.
 
 | Controller | Slot | Use when the protocol needs |
 |---|---|---|
-| `NirsHreflexOpenLoopWithAudio` | 14 | fNIRS event markers + H-reflex |
+| `NirsHreflexArduinoOpenLoopWithAudio` | 14 | fNIRS event markers + H-reflex |
 | `NirsAutomaticityAssessment` | 10 | Overground fNIRS dual-task |
 | `OGNBackTask` | 13 | Overground N-back cognitive dual-task |
 
@@ -123,7 +124,7 @@ GUI menu slot numbers correspond to `case` labels in
 | 15 | `controlSpeedWithSteps_WeberPerceptionFaster` | Weber perception variant; faster inter-stride update for threshold estimation. | Weber Perception |
 | 8 | `HreflexOGWithAudio` | Overground (no belt control) with H-reflex triggers and audio speed feedback. | BrainWalk (OG baseline), C3 (OG baseline) |
 | 16 | `HreflexOGWithAudio` | Same controller, second menu entry; used for H-reflex OG trials with audio in SpinalAdapt. | SpinalAdapt |
-| 14 | `NirsHreflexOpenLoopWithAudio` | Split-belt controller with fNIRS event markers, H-reflex stimulation, and audio feedback. | NirsAutomaticityProtocol, SpinalAdapt (calibration) |
+| 14 | `NirsHreflexArduinoOpenLoopWithAudio` | Split-belt controller with fNIRS event markers, H-reflex stimulation, and audio feedback. | NirsAutomaticityProtocol, SpinalAdapt (calibration) |
 | 10 | `NirsAutomaticityAssessment` | Overground alphabet dual-task assessment. Records responses and logs events. | BrainWalk, NirsAutomaticityProtocol |
 | 12 | `Dulce_grad_betarev2` | H-reflex gradient computation tool (grad project). | Standalone H-reflex analysis |
 | 13 | `OGNBackTask` | Overground N-back cognitive dual-task; plays audio stimuli and records Wii-remote responses. | BrainWalk |
@@ -315,7 +316,7 @@ right button to indicate perceived faster belt.
 
 Used in SpinalAdapt and NirsAutomaticityProtocol. The Arduino
 interface is in `HreflexStimArduino/`. Stimulation timing is triggered
-by the `NirsHreflexOpenLoopWithAudio` and `HreflexOGWithAudio`
+by the `NirsHreflexArduinoOpenLoopWithAudio` and `HreflexOGWithAudio`
 controllers.
 
 **Hardware:** Arduino Uno + two Digitimer DS8R constant-current
