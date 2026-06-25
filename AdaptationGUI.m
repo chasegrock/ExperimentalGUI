@@ -40,7 +40,7 @@ end
 if nargout
     [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
 else
-    
+
     gui_mainfcn(gui_State, varargin{:});
 end
 % End initialization code - DO NOT EDIT
@@ -271,7 +271,7 @@ set(handles.Status_textbox,'BackgroundColor','Yellow');
 startedEMG_flag=false; %turned on by Dulce 3/12/2020
 if get(handles.EMGWorks_checkbox,'Value')==1
     startedEMG_flag=true;
-    
+
     if get(handles.EMGWorks_checkbox,'Value')==1
         button=questdlg('Please confirm that EMGworks is in trigger mode');  %added by DMMO 3/13/2020
         if ~strcmp(button,'Yes')
@@ -280,15 +280,15 @@ if get(handles.EMGWorks_checkbox,'Value')==1
     else
         %           pause(3);
     end
-    
+
     disp(['Opening EMGWorks Port '  datestr(datetime('now'))])
     ss = serial('COM14');
     fopen(ss);
     pause(0.1);
     fclose(ss);
     disp(['Done Opening EMGWorks Port '  datestr(datetime('now'))])
-    
-    
+
+
     %     %Do something
     %     startedEMG_flag=true;
     %     XServer.AppActivate('EMGworks 4.0.13 - Workflow Environment Pro'); %Get EMG in front
@@ -298,9 +298,9 @@ if get(handles.EMGWorks_checkbox,'Value')==1
 end
 startedNexus_flag=false;
 if get(handles.Nexus_checkbox,'Value')==1
-    
+
     startedNexus_flag=true;
-    
+
     %**************wait for keyboard press before starting nexus and
     %everything else
     %     pause;
@@ -313,7 +313,7 @@ if get(handles.Nexus_checkbox,'Value')==1
     %      pause(.1)
     %      robot.mouseRelease(InputEvent.BUTTON1_MASK);
     %      XServer.AppActivate('AdaptationGUI');
-    
+
     % %**************New method triggering Nexus with UDP Packet
     %     if pathflag == 1
     %     [dontcare,sessionpath] = uigetfile('*.*','Please select a trial in the database being used:');
@@ -334,7 +334,7 @@ if get(handles.Nexus_checkbox,'Value')==1
     %      %current method of triggering, matlab sends command via serial port.
     %      %MOnitor in Nexus watched for pulse to toggle start/stop.
     %      %use orange wire out of serial port to pin 64 on AD board
-    
+
     disp(['Opening Vicon Port '  datestr(datetime('now'))])
     s = serial('COM1'); % vicon
     fopen(s);
@@ -356,31 +356,31 @@ if get(handles.Nexus_checkbox,'Value')==1
     else
         %           pause(3);
     end
-    
+
     %Deleting old plots:
     ll=findobj(handles.profileaxes,'Type','Line');
     delete(ll(1:end-2));
     ll=findobj(handles.profileaxes,'Type','AnimatedLine');
     delete(ll);
-    
+
     %Give some time between Nexus start and treadmill start
     pause(.1)
-    
+
 end
 
 %switch between the available functions to call
 aux=regexp(profilename,'\');
 shortName=profilename(aux(end)+1:end-4);
 switch(selection)
-    
+
     case 1%control speed with steps
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_edit1(round(velL*1000), round(velR*1000), forceThreshold, shortName); %
-        
+
     case 2
         mode=1; %Signed
         allowedKeys={'numpad4','numpad6','leftarrow','rightarrow','pagedown','pageup'};
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_selfSelect(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode); %
-        
+
     case 3
         mode=0; %Unsigned
         allowedKeys={'numpad8','numpad2','uparrow','downarrow'};
@@ -390,7 +390,7 @@ switch(selection)
         end
         %signList
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_selfSelect(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode,signList); %
-        
+
     case 4
         mode=4; %Closed-loop control
         %Requires two global function handles to be defined:
@@ -400,7 +400,7 @@ switch(selection)
             error('paramComputeFunc or paramCalibFunc are not defined.')
         end
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_selfSelect(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode,[],paramComputeFunc,paramCalibFunc); %
-        
+
     case 5%self selected speed
         disp('running self selected speed');
         %be sure to have selected the right profile!!!!!
@@ -408,8 +408,8 @@ switch(selection)
         ssrecord(1) = [];%delete useless zero at beginning
         disp(['The mean self selected seed is: ' num2str(nanmean(ssrecord))]);
         disp(['The stdev of speeds is: ' num2str(nanstd(ssrecord))]);
-        
-        
+
+
     case 6
         newline = sprintf('\n');
         set(handles.Status_textbox,'FontSize',10);
@@ -425,13 +425,13 @@ switch(selection)
         listofss = unique(listofss)
         disp('mean selected speed: ');
         mean(listofss)./1000
-        
+
     case 7 % Perceptual trial ends when a click is recorded but the task length is determined by strides
-        
+
         mode=1;
         allowedKeys={'numpad4','numpad6','leftarrow','rightarrow','pagedown','pageup'};
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_selfSelect_OneClick(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode); %
-        
+
     case 8 %providing audio feedback to the participants during overground walking
         disp('Overground audio speed feedback');
         mode=1;
@@ -441,23 +441,23 @@ switch(selection)
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = HreflexOGWithAudio(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode,[],[],[],strcmp(audioFbBtn,'Yes'), false); %last arg = hreflex present = false (Hreflex OG has its own controller)
         %Previous controller code below (obsolte)
         %be sure to have selected the right profile!!!!!
-%         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = Speed_audioFeedback(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode,[],[],[],strcmp(audioFbBtn,'Yes'));
-%         ssrecord = [];%delete useless zero at beginning
-%         disp(['The mean self selected seed is: ' num2str(nanmean(ssrecord))]);
-%         disp(['The stdev of speeds is: ' num2str(nanstd(ssrecord))]);
+        %         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = Speed_audioFeedback(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode,[],[],[],strcmp(audioFbBtn,'Yes'));
+        %         ssrecord = [];%delete useless zero at beginning
+        %         disp(['The mean self selected seed is: ' num2str(nanmean(ssrecord))]);
+        %         disp(['The stdev of speeds is: ' num2str(nanstd(ssrecord))]);
         % % %         ssrecord
-        
+
     case 9
         mode=1;
         allowedKeys={'numpad4','numpad6','leftarrow','rightarrow','pagedown','pageup'};
-%         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_selfSelect_OneClick_Adap(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode); %
+        %         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_selfSelect_OneClick_Adap(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode); %
         % Now the perceptual trial is controlled by time, a response to the
         % perceptual task ends the task, we do not ramp down after the
         % task, save forces in datlog
         % 06/20/24
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_PercAdap(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode); %
-              
-        
+
+
     case 10
         disp('AutomaticityAssessmentProtocol');
         mode=1;
@@ -466,10 +466,10 @@ switch(selection)
     case 11
         global numAudioCountDown %Added by Shuqi 1/19/2022, default [-1], only count down at TM start and end
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_edit1_AudioCountDown(round(velL*1000), round(velR*1000), forceThreshold, shortName, numAudioCountDown); %
-        
+
     case 12
         [RatioR,RatioL,RatiomeanR,RatiomeanL,Rstd,Lstd,alphaR,alphaL,alphaRmean,alphaLmean,alphaRstd,alphaLstd,betameanR,betameanL,Rsci,Lsci,XmeanR,XmeanL,RatioXmeanR,RatioXmeanL,RsciX,LsciX] = Dulce_grad_betarev2(round(velL*1000), round(velR*1000), forceThreshold);
-        
+
         disp('the mean ratio for the R leg is:');
         disp(RatiomeanR);
         disp('the mean ratio  for the L leg is:');
@@ -498,16 +498,16 @@ switch(selection)
         disp(RsciX)
         disp('L scale with X')
         disp(LsciX)
-        
+
     case 13
         disp('NBackOG Protocol');
         mode=1;
         allowedKeys={'numpad4','numpad6','leftarrow','rightarrow','pagedown','pageup'};
         playClickerSound = false;
-%         trialOptions = {'Standing Familarization 0back (up to 3 times)','Standing Familarization 1back (up to 3 times)',...
-%             'Standing Familarization 2back (up to 3 times)','Full Familarization 0back (only 1 repeat)',...
-%             'Full Familarization 1back (only 1 repeat)','Full Familarization 2back (only 1 repeat)',...
-%             'Trial 1','Trial 2','Trial 3','Trial 4','Trial 5','Trial 6'};
+        %         trialOptions = {'Standing Familarization 0back (up to 3 times)','Standing Familarization 1back (up to 3 times)',...
+        %             'Standing Familarization 2back (up to 3 times)','Full Familarization 0back (only 1 repeat)',...
+        %             'Full Familarization 1back (only 1 repeat)','Full Familarization 2back (only 1 repeat)',...
+        %             'Trial 1','Trial 2','Trial 3','Trial 4','Trial 5','Trial 6'};
         trialOptions = {'Full Familarization 0back (up to 3 repeats)',...
             'Full Familarization 1back (up to 3 repeats)','Full Familarization 2back (up to 3 repeats)',...
             'Trial 1','Trial 2','Trial 3','Trial 4','Trial 5','Trial 6'};
@@ -521,7 +521,7 @@ switch(selection)
             end
         end
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = OGNBackTask(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode,[],[],[],trialOptions{currTrial}); %offset the input by 2 so that the familiarization will be -1 and 0
-        
+
     case 14 %support open loop while logging events to NIRS & stimulate every 10 strides (specified inside the controller), optionally could have timed rest breaks in between, event timing will be auto generated by parsing the velL and velR.
         disp('Short Split Train Nirs Protocol')
         global numAudioCountDown %Added by Shuqi 1/19/2022, default [-1], only count down at TM start and end
@@ -531,12 +531,12 @@ switch(selection)
         else
             [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = NirsHreflexArduinoOpenLoopWithAudio(round(velL*1000), round(velR*1000), forceThreshold, shortName, numAudioCountDown, isCalibration, true, true);
         end
-        
+
     case 15 % Perceptual trial ends when a click is recorded but the task length is determined by time
         mode=1;
         allowedKeys={'numpad4','numpad6','leftarrow','rightarrow','pagedown','pageup'};
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_WeberPerceptionFaster(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode); %
-    
+
     case 16 % OG Hreflex with Audio feedback (fast, slow, good job)
         mode=1;
         audioFbBtn=questdlg('Should audio feedback on speed be provided?');  %added by DMMO 3/13/2020
@@ -563,7 +563,7 @@ if startedNexus_flag
     %      pause(.1)
     %      robot.mouseRelease(InputEvent.BUTTON1_MASK);
     %      XServer.AppActivate('AdaptationGUI');
-    
+
     %***************New method, use UDP packet to stop Nexus collection
     %       stopmsg=['<?xml version="1.0" encoding="UTF-8" standalone="no" ?><CaptureStop RESULT="SUCCESS"><Name VALUE="Trial' num2str(TrialNum) '"/><DatabasePath VALUE="' nexuspath '\"/><Delay VALUE="0"/><PacketID VALUE="' num2str(TrialNum*10) '"/></CaptureStop>']; %311
     %       step(myudp,int8(stopmsg));
@@ -690,14 +690,13 @@ else
     set(handles.Pause_togglebutton,'String','Resume');
     set(handles.Status_textbox,'String','Paused');
     set(handles.Status_textbox,'BackgroundColor','Yellow');
-    
+
     %disable execute button so it can't be pressed again, causing a crash
     set(handles.Execute_button,'Enable','off');
 end
 
 
 guidata(hObject, handles);
-
 
 % --- Executes on button press in HideLog_checkbox.
 function HideLog_checkbox_Callback(hObject, eventdata, handles)
@@ -814,9 +813,9 @@ pause(0.25);
 profilename=[dd ff];
 try
     load(profilename);
-    
+
     t = [0:length(velL)-1];
-    
+
     set(handles.profileaxes,'NextPlot','replace')
     plot(handles.profileaxes,t,velL,'b',t,velR,'r','LineWidth',2);
     if isrow(velL) && isrow(velR)
@@ -825,21 +824,21 @@ try
         ylim([min([velL;velR])-1,max([velL;velR])+1]);
     end
     % ylim([0 2.0]);
-    
+
     xlabel('Stride Count');
     ylabel('Speed (m/s)');
     legend('Left Foot','Right Foot','AutoUpdate','off');
     set(handles.profileaxes,'NextPlot','add')
-    
+
     set(handles.Status_textbox,'String','Ready');
     set(handles.Status_textbox,'BackgroundColor','Green');
     set(handles.totalLstepsBox,'String',num2str(length(velL)));
     set(handles.totalRstepsBox,'String',num2str(length(velL)));
     clear velL velR;
-    
+
     set(handles.Execute_button,'Enable','on');
 catch
-    
+
 end
 
 guidata(hObject, handles);
@@ -892,8 +891,6 @@ end
 
 guidata(hObject, handles);
 
-
-
 function manspeedbox_Callback(hObject, eventdata, handles)
 % hObject    handle to manspeedbox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -914,7 +911,6 @@ function manspeedbox_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 % --- Executes on button press in waitForNexusChkBox.
 function waitForNexusChkBox_Callback(hObject, eventdata, handles)
@@ -962,14 +958,14 @@ keypress = eventdata.Key;
 isAllowed=any(strcmp(keypress,allowedKeys));
 % disp('Detect click')
 if enableMemory && isAllowed && keyWasReleased
-%     disp('Detect click and if yes')
+    %     disp('Detect click and if yes')
     %Add to counter & record keypress in log
     counter=counter+1;
     addLog.keypress{counter,1}=keypress;
     addLog.keypress{counter,2}=now;
     addLog.keypressHeader={'Choice', 'Time', 'RStepCount', 'LStepCount', 'AddSteps'};
     addLog.keyTime{counter,1}=datetime(now,'ConvertFrom','datenum');
-    
+
     %Take action:
     if ~firstPress
         global memory
@@ -994,7 +990,7 @@ if enableMemory && isAllowed && keyWasReleased
     else %firstpress=true
         firstPress=false; %firstPress=false; MGR and KF 02/18/2022
     end
-    
+
     %%  Update the feedback figure
     % % % % % % %
     % % % % % % %         if strcmp(keypress, 'pagedown')==1 || strcmp(keypress, 'numpad6')==1 || strcmp(keypress, 'rightarrow')==1%IF I get info that they clicked Right
@@ -1007,14 +1003,14 @@ if enableMemory && isAllowed && keyWasReleased
     % % % % % % % %             RFBClicker=0; %ITS NEVER GETTING HERE!!!
     % % % % % % % %             LFBClicker=0;
     % % % % % % %         end
-    
+
     %%
     % % % % % % % % %Play tone: %Uncomment to go back to previous perception
     % study (PAblo's)
     % % % % % % % %fo=2000;
     % % % % % % % %tone=sin(2*pi*[1:32]*fo/8192); %4ms tone
     % % % % % % % %Fs=8192;
-    
+
     % % % % % %     Fs=48000;
     % % % % %    beep()
     % % % % %
@@ -1022,7 +1018,7 @@ if enableMemory && isAllowed && keyWasReleased
     % % % % %     %now
     % % % % %     lastKeyPress=now;
     % % % % %     keyWasReleased=false;
-    
+
     %% Play tone (Added by Marcela for the Weber Perception 10/04/2019). If you want to go
     %back to the previous perception study uncommment the previous Play tone
     %secttion and comment this one.
@@ -1035,11 +1031,9 @@ if enableMemory && isAllowed && keyWasReleased
         end
     end
     %   play(fastbeep);
-    
+
     lastKeyPress=now;
     keyWasReleased=false;
-    
-    
 end
 
 function figure1_WindowKeyReleaseFcn(hObject, eventdata, handles)
@@ -1057,7 +1051,6 @@ if isAllowed
     keyWasReleased=true;
 end
 
-
 % --- Executes on mouse press over figure background, over a disabled or
 % --- inactive control, or over an axes background.
 function figure1_WindowButtonUpFcn(hObject, eventdata, handles)
@@ -1065,8 +1058,6 @@ function figure1_WindowButtonUpFcn(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 %Executes when mouse button is released
-
-
 
 % --- Executes on mouse press over figure background, over a disabled or
 % --- inactive control, or over an axes background.
@@ -1104,7 +1095,6 @@ function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
 %     end
 % end
 
-
 % --- Executes on button press in feedbackBox.
 function feedbackBox_Callback(hObject, eventdata, handles)
 % hObject    handle to feedbackBox (see GCBO)
@@ -1115,13 +1105,11 @@ function feedbackBox_Callback(hObject, eventdata, handles)
 global feedbackFlag
 feedbackFlag=hObject.Value;
 
-
 % --- Executes during object creation, after setting all properties.
 function EMGWorks_checkbox_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to EMGWorks_checkbox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
-
 
 % --- Executes during object deletion, before destroying properties.
 function EMGWorks_checkbox_DeleteFcn(hObject, eventdata, handles)
