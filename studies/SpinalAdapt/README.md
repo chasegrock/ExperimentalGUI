@@ -33,15 +33,21 @@ precise H-reflex stimulation timing before collection resumes.
 - Overground baseline trials: `HreflexOGWithAudio` (GUI menu slot 16).
   The speed feedback range must be adjusted manually between
   participants based on comfortable overground walking speed.
-- Calibration trials: `NirsHreflexOpenLoopWithAudio` (slot 14).
+- Calibration trials: `NirsHreflexArduinoOpenLoopWithAudio` (slot 14).
 - H-reflex stimulation timing: the Arduino owns the precise
-  50%-single-stance pulse timing; `NirsHreflexOpenLoopWithAudio` sends a
-  per-stride gate byte (`1`/`2`) at single-stance onset. Earlier code
-  waited until mid-stance, which left too little margin before the
-  Arduino's 50% trigger and caused missed or mistimed stims under
-  control-loop jitter — now fixed (MATLAB-only). Display work was also
-  moved off the control loop's hot path (`drawnow limitrate`, reusable
-  `animatedline` markers, throttled textbox updates).
+  50%-single-stance pulse timing; `NirsHreflexArduinoOpenLoopWithAudio`
+  sends command `0` once before the main loop to start the Arduino's
+  state machine, a per-stride gate byte (`1`/`2`) at single-stance onset,
+  and command `3` in the closing routine to stop the state machine.
+  Earlier code waited until mid-stance to send the gate, which left too
+  little margin before the Arduino's 50% trigger and caused missed or
+  mistimed stims under control-loop jitter — now fixed (MATLAB-only).
+  Display work was also moved off the control loop's hot path (`drawnow
+  limitrate`, reusable `animatedline` markers, throttled textbox
+  updates). The deprecated `NirsHreflexOpenLoopWithAudio` (now in
+  `controllers/Deprecated/`) pairs with the alternative
+  `Dual_Stim_Matlab.ino` firmware (fully MATLAB-timed, no on-board gait
+  detection) and is kept only as a fallback for that mode.
 
 ## Validation Before Resuming Collection
 

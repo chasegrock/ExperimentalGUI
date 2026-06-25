@@ -19,7 +19,7 @@ for full descriptions, study-usage details, and protocol-creation guidance.
 
 | Controller | Slot | Use when the protocol needs |
 |---|---|---|
-| `NirsHreflexOpenLoopWithAudio` | 14 | fNIRS event markers + H-reflex stimulation |
+| `NirsHreflexArduinoOpenLoopWithAudio` | 14 | fNIRS event markers + H-reflex stimulation |
 | `NirsAutomaticityAssessment` | 10 | Overground fNIRS dual-task assessment |
 | `OGNBackTask` | 13 | Overground N-back cognitive dual-task |
 
@@ -42,7 +42,7 @@ recommended as starting points for new protocols.
 | 11 | `controlSpeedWithSteps_edit1_AudioCountDown.m` | Split-belt with audio countdown cue at trial start |
 | 12 | `Dulce_grad_betarev2.m` | H-reflex gradient computation (grad project) |
 | 13 | `OGNBackTask.m` | Overground N-back cognitive dual-task (Wii remote input) |
-| 14 | `NirsHreflexOpenLoopWithAudio.m` | Split-belt with fNIRS events, H-reflex, and audio feedback |
+| 14 | `NirsHreflexArduinoOpenLoopWithAudio.m` | Split-belt with fNIRS events, Arduino-timed H-reflex, and audio feedback |
 | 15 | `controlSpeedWithSteps_WeberPerceptionFaster.m` | Weber perception; fast inter-stride updates |
 
 ## Utility Helpers
@@ -51,9 +51,14 @@ recommended as starting points for new protocols.
 |---|---|
 | `generateNbackRestEventString.m` | `OGNBackTask` |
 | `generateNirsRestEventString.m` | `NirsAutomaticityAssessment` |
-| `nirsEvent.m` | `OGNBackTask`, `NirsAutomaticityAssessment`, `NirsHreflexOpenLoopWithAudio` |
+| `nirsEvent.m` | `OGNBackTask`, `NirsAutomaticityAssessment`, `NirsHreflexArduinoOpenLoopWithAudio` |
 
 ## Deprecated/
 
 Inactive backup variants and experimental branches. Files are preserved here
 for reference and git history but are not part of the active controller set.
+
+- `NirsHreflexOpenLoopWithAudio.m` — MATLAB-timed H-reflex variant; pairs
+  with `HreflexStimArduino/Dual_Stim_Matlab.ino` (immediate-fire, no
+  on-board gait detection), not the current production firmware. Kept as
+  the fallback if the lab ever reverts to that firmware.

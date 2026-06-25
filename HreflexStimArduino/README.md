@@ -21,6 +21,16 @@ The current production sketch is
 when you want MATLAB to control the stimulation timing directly rather than
 delegating gait-event detection to the Arduino.
 
+Each sketch has exactly one matching MATLAB controller — using the wrong
+pairing means either the Arduino's state machine never starts (no `0`/`3`
+handshake) or stims fire at the wrong point in stance (gate timed for the
+wrong firmware):
+
+| Sketch | MATLAB controller |
+|---|---|
+| `triggerStimWithGaitStateMachine_SpeedIndependent` | `controllers/NirsHreflexArduinoOpenLoopWithAudio.m` |
+| `Dual_Stim_Matlab` | `controllers/Deprecated/NirsHreflexOpenLoopWithAudio.m` (fallback only) |
+
 ---
 
 ## How the System Works
