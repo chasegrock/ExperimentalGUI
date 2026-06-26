@@ -32,7 +32,7 @@ addpath(genpath('C:\Users\cntctsml\Documents\GitHub\labTools\'));
 
 | Path root | Provides | Example symbols |
 |---|---|---|
-| `C:\Program Files\Vicon\` | Vicon DataStream SDK (.NET) for real-time motion capture streaming, plus the `ViconNexus` class | `ViconDataStreamSDK.DotNET.Client`, `MyClient.GetFrame`, `MyClient.GetMarkerGlobalTranslation`, `MyClient.GetDeviceOutputValue` |
+| `C:\Program Files\Vicon\` | Vicon DataStream SDK v1.11.0 (`.NET`; `ViconDataStreamSDK_DotNET.dll`) — real-time motion capture streaming | `ViconDataStreamSDK.DotNET.Client`, `MyClient.GetFrame`, `MyClient.GetMarkerGlobalTranslation`, `MyClient.GetDeviceOutputValue` |
 | `C:\Users\Public\Documents\MATLAB\` | Bertec treadmill communication layer (UDP packet build/send/read) | `getPayload`, `sendTreadmillPacket`, `readTreadmillPacket`, `openTreadmillComm`, `getCurrentData` |
 | `C:\Users\cntctsml\Documents\GitHub\labTools\` | PittSMLlab `labTools` — used here for post-trial C3D export and marker-gap filling | `dataMotion.processAndFillMarkerGapsSession`, `dataMotion.exportSessionToC3D` |
 
@@ -40,7 +40,10 @@ addpath(genpath('C:\Users\cntctsml\Documents\GitHub\labTools\'));
 > `sendTreadmillPacket`, etc.) live on the lab PC under
 > `C:\Users\Public\Documents\MATLAB\`, **not** in `labTools`. The actual
 > `labTools` runtime dependency is the `dataMotion.*` namespace, called
-> by the `studies/*` data-transfer scripts. See
+> by the `studies/*` data-transfer scripts. The `ViconNexus` class is
+> **not** part of the DataStream SDK above — it comes from the separate
+> Vicon Nexus MATLAB SDK (installed with Nexus; confirm:
+> `which ViconNexus` on the lab PC). See
 > [EXPERIMENT_SETUP.md](EXPERIMENT_SETUP.md) for the full editable-boundary
 > map.
 
