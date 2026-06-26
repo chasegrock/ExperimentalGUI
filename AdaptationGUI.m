@@ -411,24 +411,25 @@ switch(selection)
     case 1 % control speed with steps
 
     case 2
-        mode=1; %Signed
-        allowedKeys={'numpad4','numpad6','leftarrow','rightarrow','pagedown','pageup'};
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_selfSelect(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode); %
+        mode = 1; % Signed
+        allowedKeys = {'numpad4', 'numpad6', 'leftarrow', ...
+            'rightarrow', 'pagedown', 'pageup'};
 
     case 3
-        mode=0; %Unsigned
-        allowedKeys={'numpad8','numpad2','uparrow','downarrow'};
-        if ~exist('signList','var')
-            signList=[];
+        mode = 0; % Unsigned
+        allowedKeys = {'numpad8', 'numpad2', 'uparrow', 'downarrow'};
+        if ~exist('signList', 'var')
+            signList = [];
             %disp('bad')
         end
         %signList
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_selfSelect(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode,signList); %
 
     case 4
-        mode=4; %Closed-loop control
-        %Requires two global function handles to be defined:
-        [calibFilename,~,~] = uigetfile('*.*');
+        mode = 4; % Closed-loop control
+        % Requires two global function handles to be defined:
+        [calibFilename, ~, ~] = uigetfile('*.*');
         load(calibFilename)
         if ~exist('paramComputeFunc','var') || ~exist('paramCalibFunc','var') || ~isa(paramComputeFunc,'function_handle') || ~isa(paramCalibFunc,'function_handle')
             error('paramComputeFunc or paramCalibFunc are not defined.')
@@ -437,18 +438,20 @@ switch(selection)
 
     case 5 % self selected speed
         disp('running self selected speed');
-        %be sure to have selected the right profile!!!!!
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame, ssrecord] = SelfSelectedSpeed(round(velL*1000),round(velR*1000),forceThreshold);
-        ssrecord(1) = [];%delete useless zero at beginning
-        disp(['The mean self selected seed is: ' num2str(nanmean(ssrecord))]);
-        disp(['The stdev of speeds is: ' num2str(nanstd(ssrecord))]);
+        % be sure to have selected the right profile!!!!!
+        ssrecord(1) = []; % delete useless zero at beginning
+        disp(['The mean self selected seed is: ' ...
+            num2str(mean(ssrecord, 'omitnan'))]);
+        disp(['The stdev of speeds is: ' ...
+            num2str(std(ssrecord, 'omitnan'))]);
 
     case 6
         newline = sprintf('\n');
-        set(handles.Status_textbox,'FontSize',10);
         set(handles.Status_textbox,'String',['Busy...',newline,'Press 8 to +',newline,'Press 2 to -',newline,'Press "f" to perturb fast',newline,'Press "s" to perturb slow',newline,'Press "b" to return to profile']);
-        ssout = SelfSelectedSpeed_NumPad(velL*1000,velR*1000,30);
-        set(handles.Status_textbox,'FontSize',20);
+        set(handles.Status_textbox, 'FontSize', 10);
+        ssout = SelfSelectedSpeed_NumPad(velL*1000, velR*1000, 30);
+        set(handles.Status_textbox, 'FontSize', 20);
         listofss = ssout;
         listofss(listofss == 0) = [];
         listofss(listofss == 500) = [];
@@ -459,18 +462,23 @@ switch(selection)
         disp('mean selected speed: ');
         mean(listofss)./1000
 
-        mode=1;
-        allowedKeys={'numpad4','numpad6','leftarrow','rightarrow','pagedown','pageup'};
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_selfSelect_OneClick(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode); %
     case 7 % Perceptual trial: ends on click; length set by strides
+        mode = 1;
+        allowedKeys = {'numpad4', 'numpad6', 'leftarrow', ...
+            'rightarrow', 'pagedown', 'pageup'};
 
     case 8 % audio feedback to participants during overground walking
         disp('Overground audio speed feedback');
-        mode=1;
-        audioFbBtn=questdlg('Should audio feedback on speed be provided?');  %added by DMMO 3/13/2020
-        %Replace overground audio controller with the new one developed by
-        %Nate to have better stride counting using the state machine
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = HreflexOGWithAudio(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode,[],[],[],strcmp(audioFbBtn,'Yes'), false); %last arg = hreflex present = false (Hreflex OG has its own controller)
+        mode = 1;
+        % added by DMMO 3/13/2020
+        audioFbBtn = questdlg( ...
+            'Should audio feedback on speed be provided?');
+        % Replace overground audio controller with the new one developed
+        % by Nate to have better stride counting using the state machine
+        % last arg = hreflex present = false (Hreflex OG has its own
+        % controller)
         %Previous controller code below (obsolte)
         %be sure to have selected the right profile!!!!!
         %         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = Speed_audioFeedback(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode,[],[],[],strcmp(audioFbBtn,'Yes'));
@@ -480,8 +488,9 @@ switch(selection)
         % % %         ssrecord
 
     case 9
-        mode=1;
-        allowedKeys={'numpad4','numpad6','leftarrow','rightarrow','pagedown','pageup'};
+        mode = 1;
+        allowedKeys = {'numpad4', 'numpad6', 'leftarrow', ...
+            'rightarrow', 'pagedown', 'pageup'};
         %         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_selfSelect_OneClick_Adap(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode); %
         % Now the perceptual trial is controlled by time, a response to the
         % perceptual task ends the task, we do not ramp down after the
@@ -491,13 +500,16 @@ switch(selection)
 
     case 10
         disp('AutomaticityAssessmentProtocol');
-        mode=1;
-        currTrial = inputdlg('What is the current_iteration (o=familiarization): ');
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = NirsAutomaticityAssessment(round(velL*1000), round(velR*1000), shortName,mode,[],[],[],str2num(currTrial{1}));
+        mode = 1;
+        currTrial = inputdlg( ...
+            'What is the current_iteration (o=familiarization): ');
 
     case 11
-        global numAudioCountDown %Added by Shuqi 1/19/2022, default [-1], only count down at TM start and end
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_edit1_AudioCountDown(round(velL*1000), round(velR*1000), forceThreshold, shortName, numAudioCountDown); %
+        % Added by Shuqi 1/19/2022, default [-1], only count down at
+        % TM start and end
+        global numAudioCountDown
 
     case 12
         [RatioR,RatioL,RatiomeanR,RatiomeanL,Rstd,Lstd,alphaR,alphaL,alphaRmean,alphaLmean,alphaRstd,alphaLstd,betameanR,betameanL,Rsci,Lsci,XmeanR,XmeanL,RatioXmeanR,RatioXmeanL,RsciX,LsciX] = Dulce_grad_betarev2(round(velL*1000), round(velR*1000), forceThreshold);
@@ -533,46 +545,54 @@ switch(selection)
 
     case 13
         disp('NBackOG Protocol');
-        mode=1;
-        allowedKeys={'numpad4','numpad6','leftarrow','rightarrow','pagedown','pageup'};
+        mode = 1;
+        allowedKeys = {'numpad4', 'numpad6', 'leftarrow', ...
+            'rightarrow', 'pagedown', 'pageup'};
         playClickerSound = false;
         %         trialOptions = {'Standing Familarization 0back (up to 3 times)','Standing Familarization 1back (up to 3 times)',...
         %             'Standing Familarization 2back (up to 3 times)','Full Familarization 0back (only 1 repeat)',...
         %             'Full Familarization 1back (only 1 repeat)','Full Familarization 2back (only 1 repeat)',...
         %             'Trial 1','Trial 2','Trial 3','Trial 4','Trial 5','Trial 6'};
-        trialOptions = {'Full Familarization 0back (up to 3 repeats)',...
-            'Full Familarization 1back (up to 3 repeats)','Full Familarization 2back (up to 3 repeats)',...
-            'Trial 1','Trial 2','Trial 3','Trial 4','Trial 5','Trial 6'};
         [currTrial,~] = listdlg('PromptString','What trial is this:','ListString',trialOptions,'SelectionMode','single','ListSize',[300,150]);
+        trialOptions = {'Full Familarization 0back (up to 3 repeats)', ...
+            'Full Familarization 1back (up to 3 repeats)', ...
+            'Full Familarization 2back (up to 3 repeats)', ...
+            'Trial 1', 'Trial 2', 'Trial 3', 'Trial 4', 'Trial 5', ...
+            'Trial 6'};
         if isempty(currTrial)
             error('Invalid selection. Try again.')
         else
-            confirmTrial = questdlg(sprintf('You selected: %s.\n Is this correct?',trialOptions{currTrial}));
-            if ~strcmp(confirmTrial,'Yes')
-                error('Invalid selection. Try again.')%Abort starting the trial
+            confirmTrial = questdlg(sprintf( ...
+                'You selected: %s.\n Is this correct?', ...
+                trialOptions{currTrial}));
+            if ~strcmp(confirmTrial, 'Yes')
+                error('Invalid selection. Try again.') % Abort the trial
             end
         end
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = OGNBackTask(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode,[],[],[],trialOptions{currTrial}); %offset the input by 2 so that the familiarization will be -1 and 0
 
     case 14 % open-loop NIRS logging; Arduino stim every 10 strides
         disp('Short Split Train Nirs Protocol')
-        global numAudioCountDown %Added by Shuqi 1/19/2022, default [-1], only count down at TM start and end
-        global isCalibration %Added by SL 5/7/2024, default false, not a calibration trial
-        if exist('stimL','var') && exist('stimR','var')
             [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = NirsHreflexArduinoOpenLoopWithAudio(round(velL*1000), round(velR*1000), forceThreshold, shortName, numAudioCountDown, isCalibration, true, true, stimL,stimR);
+        global numAudioCountDown % default [-1] (Shuqi 1/19/2022)
+        global isCalibration % default false, not calibration (SL 5/7/2024)
+        if exist('stimL', 'var') && exist('stimR', 'var')
         else
             [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = NirsHreflexArduinoOpenLoopWithAudio(round(velL*1000), round(velR*1000), forceThreshold, shortName, numAudioCountDown, isCalibration, true, true);
         end
 
-        mode=1;
-        allowedKeys={'numpad4','numpad6','leftarrow','rightarrow','pagedown','pageup'};
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_WeberPerceptionFaster(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode); %
-        mode=1;
-        audioFbBtn=questdlg('Should audio feedback on speed be provided?');  %added by DMMO 3/13/2020
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = HreflexOGWithAudio(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode,[],[],[],strcmp(audioFbBtn,'Yes'));
     case 15 % Perceptual trial: ends on click; length set by time
+        mode = 1;
+        allowedKeys = {'numpad4', 'numpad6', 'leftarrow', ...
+            'rightarrow', 'pagedown', 'pageup'};
 
     case 16 % OG Hreflex with audio feedback (fast, slow, good job)
+        mode = 1;
+        % added by DMMO 3/13/2020
+        audioFbBtn = questdlg( ...
+            'Should audio feedback on speed be provided?');
 end
 
 pause(1.5); % Wait three seconds before stopping software collection
@@ -641,24 +661,18 @@ STOP = true;
 
 
 guidata(hObject, handles);
-% --- Executes on selection change in listbox1.
-function listbox1_Callback(hObject, eventdata, handles)
-% hObject    handle to listbox1 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hints: contents = cellstr(get(hObject,'String')) returns listbox1 contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from listbox1
 % ============================================================
 % ================ Logging, Exit & Save ======================
 % ============================================================
 
+% --- Executes on selection change in listbox1.
+function listbox1_Callback(hObject, eventdata, handles)
+% Hints: contents = cellstr(get(hObject,'String')) returns listbox1
+%        contents{get(hObject,'Value')} returns selected item
 
 % --- Executes during object creation, after setting all properties.
 function listbox1_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to listbox1 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
 % Hint: listbox controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject, 'BackgroundColor'), ...
@@ -715,8 +729,6 @@ end
 save(savename, 'listbox');
 % save savename;
 
-set(handles.Status_textbox,'String','Ready');
-set(handles.Status_textbox,'BackgroundColor','Green');
 guidata(hObject, handles);
 
 
@@ -750,6 +762,8 @@ else
 end
 
 
+set(handles.Status_textbox, 'String', 'Ready');
+set(handles.Status_textbox, 'BackgroundColor', 'Green');
 guidata(hObject, handles);
 
 % --- Executes on button press in HideLog_checkbox.
@@ -970,12 +984,7 @@ function waitForNexusChkBox_Callback(hObject, eventdata, handles)
 % --- Executes on key press with focus on figure1 and none of its
 % --- controls.
 function figure1_KeyPressFcn(hObject, eventdata, handles)
-% hObject    handle to figure1 (see GCBO)
-% eventdata  structure with the following fields (see FIGURE)
-%	Key: name of the key that was pressed, in lower case
-%	Character: character interpretation of the key(s) that was pressed
-%	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
-% handles    structure with handles and user data (see GUIDATA)
+% eventdata fields: Key, Character, Modifier (see FIGURE)
 
 function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
 %FIGURE1_WINDOWKEYPRESSFCN Log perception-task keypresses and cue audio.
@@ -1021,35 +1030,37 @@ isAllowed = any(strcmp(keypress, allowedKeys));
 % disp('Detect click')
 if enableMemory && isAllowed && keyWasReleased
     %     disp('Detect click and if yes')
-    counter=counter+1;
-    addLog.keypress{counter,1}=keypress;
-    addLog.keypress{counter,2}=now;
-    addLog.keypressHeader={'Choice', 'Time', 'RStepCount', 'LStepCount', 'AddSteps'};
-    addLog.keyTime{counter,1}=datetime(now,'ConvertFrom','datenum');
+    % Add to counter & record keypress in log
+    counter = counter + 1;
+    addLog.keypress{counter, 1} = keypress;
+    addLog.keypress{counter, 2} = now;
+    addLog.keypressHeader = {'Choice', 'Time', 'RStepCount', ...
+        'LStepCount', 'AddSteps'};
+    addLog.keyTime{counter, 1} = datetime(now, 'ConvertFrom', 'datenum');
 
-    %Take action:
+    % Take action:
     if ~firstPress
         global memory
-        r=floor(2*rand); %Random integer in 0-2 interval
-        e=3+r;
+        r = floor(2*rand); % Random integer in 0-2 interval
+        e = 3 + r;
         switch keypress
-            case {'uparrow','numpad8'}
-                memory=memory+1i*e;
-            case {'downarrow','numpad2'}
-                memory=memory-1i*e;
-            case {'leftarrow','numpad4','pageup'}
-                memory=memory-e;
-                RFBClicker=0;
-                LFBClicker=1;
+            case {'uparrow', 'numpad8'}
+                memory = memory + 1i*e;
+            case {'downarrow', 'numpad2'}
+                memory = memory - 1i*e;
+            case {'leftarrow', 'numpad4', 'pageup'}
+                memory = memory - e;
+                RFBClicker = 0;
+                LFBClicker = 1;
                 display('LeftClick')
-            case {'rightarrow','numpad6','pagedown'}
-                memory=memory+e;
-                RFBClicker=1;
-                LFBClicker=0;
+            case {'rightarrow', 'numpad6', 'pagedown'}
+                memory = memory + e;
+                RFBClicker = 1;
+                LFBClicker = 0;
                 display('RightClick')
         end
-    else %firstpress=true
-        firstPress=false; %firstPress=false; MGR and KF 02/18/2022
+    else % firstpress=true
+        firstPress = false; % firstPress=false; MGR and KF 02/18/2022
     end
 
     %%  Update the feedback figure
@@ -1085,40 +1096,43 @@ if enableMemory && isAllowed && keyWasReleased
     %secttion and comment this one.
     %
     if playClickerSound
-        if RFBClicker==1
+        if RFBClicker == 1
             sound(rclicksound, rFrequency);
-        elseif LFBClicker==1
+        elseif LFBClicker == 1
             sound(lclicksound, lFrequency);
         end
     end
     %   play(fastbeep);
 
-    lastKeyPress=now;
-    keyWasReleased=false;
+    lastKeyPress = now;
+    keyWasReleased = false;
 end
 
 function figure1_WindowKeyReleaseFcn(hObject, eventdata, handles)
-% hObject    handle to figure1 (see GCBO)
-% eventdata  structure with the following fields (see FIGURE)
-%	Key: name of the key that was pressed, in lower case
-%	Character: character interpretation of the key(s) that was pressed
-%	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
-% handles    structure with handles and user data (see GUIDATA)
+%FIGURE1_WINDOWKEYRELEASEFCN Clear the key-held latch on key release.
+%
+%   Marks the key as released so the next allowed press is logged once.
+%
+% Inputs:
+%   hObject - handle to figure1 (see GCBO)
+%   eventdata - key event data; uses the Key field
+%   handles - structure with handles and user data (see GUIDATA)
+%
+% Toolbox Dependencies:
+%   None
+
 global keyWasReleased
 global allowedKeys
 keypress = eventdata.Key;
-isAllowed=any(strcmp(keypress,allowedKeys));
+isAllowed = any(strcmp(keypress, allowedKeys));
 if isAllowed
-    keyWasReleased=true;
+    keyWasReleased = true;
 end
 
 % --- Executes on mouse press over figure background, over a disabled or
 % --- inactive control, or over an axes background.
 function figure1_WindowButtonUpFcn(hObject, eventdata, handles)
-% hObject    handle to figure1 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-%Executes when mouse button is released
+% Executes when mouse button is released
 
 % --- Executes on mouse press over figure background, over a disabled or
 % --- inactive control, or over an axes background.
@@ -1158,14 +1172,17 @@ function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
 
 % --- Executes on button press in feedbackBox.
 function feedbackBox_Callback(hObject, eventdata, handles)
-% hObject    handle to feedbackBox (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+%FEEDBACKBOX_CALLBACK Mirror the feedback checkbox into feedbackFlag.
+%
+% Inputs:
+%   hObject - handle to feedbackBox (see GCBO)
+%   eventdata - reserved for a future MATLAB version
+%   handles - structure with handles and user data (see GUIDATA)
+%
+% Toolbox Dependencies:
+%   None
 
-% Hint: get(hObject,'Value') returns toggle state of feedbackBox
 global feedbackFlag
-feedbackFlag=hObject.Value;
-
 % --- Executes during object creation, after setting all properties.
 function EMGWorks_checkbox_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to EMGWorks_checkbox (see GCBO)
@@ -1177,3 +1194,4 @@ function EMGWorks_checkbox_DeleteFcn(hObject, eventdata, handles)
 % hObject    handle to EMGWorks_checkbox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+feedbackFlag = hObject.Value;
