@@ -13,12 +13,13 @@ submitting changes.
    - [Active Study Constraints](#active-study-constraints)
 2. [MATLAB Version Compatibility](#matlab-version-compatibility)
 3. [Code Style](#code-style)
-4. [Naming Conventions](#naming-conventions)
-5. [Documentation Comments](#documentation-comments)
-6. [Code Organization](#code-organization)
-7. [Writing Comments](#writing-comments)
-8. [Third-Party Code](#third-party-code)
-9. [Testing](#testing)
+4. [Arduino / C++ Code Style](#arduino--c-code-style)
+5. [Naming Conventions](#naming-conventions)
+6. [Documentation Comments](#documentation-comments)
+7. [Code Organization](#code-organization)
+8. [Writing Comments](#writing-comments)
+9. [Third-Party Code](#third-party-code)
+10. [Testing](#testing)
 
 ---
 
@@ -196,6 +197,142 @@ maxEvals    = round(options.MaxEvals);
 
 Only align assignments that are genuinely related. Do not
 artificially group unrelated lines just to create alignment.
+
+---
+
+## Arduino / C++ Code Style
+
+This section applies to all `.ino` files in `HreflexStimArduino/`.
+MATLAB style rules (above) do not apply to C++ files.
+
+### Naming
+
+| Item | Convention | Example |
+|---|---|---|
+| Mutable variables | camelCase | `isCurrStanceL`, `numStepsR` |
+| Functions | camelCase | `updateGaitEventStateMachine` |
+| Typed `const` variables | camelCase | `threshFzUp`, `pinInFzL` |
+| `#define` macros | UPPER\_SNAKE\_CASE | `#define MAX_SAMPLES 9` |
+| `enum` constants | UPPER\_SNAKE\_CASE | `CMD_START`, `CMD_STOP` |
+
+Serial protocol command bytes are defined as named `const int` with
+an end-of-line comment. These bytes are frozen by the H-reflex
+timing contract — do not change without re-uploading compatible
+firmware:
+
+```cpp
+// Correct
+const int cmdStart = 0; // start gait event state machine
+const int cmdStimL = 1; // stimulate left leg this stride
+const int cmdStimR = 2; // stimulate right leg this stride
+const int cmdStop  = 3; // stop gait event state machine
+```
+
+### Brace Style
+
+Use **Allman** style: the opening `{` goes on its own line for all
+functions, `if`, `for`, `while`, and `switch` statements. This
+matches the existing firmware and keeps diffs clean.
+
+```cpp
+// Correct — Allman
+void setup()
+{
+  Serial.begin(115200);
+  pinMode(pinOutStimL, OUTPUT);
+}
+
+if (shouldRunSM)
+{
+  updateGaitEventStateMachine();
+}
+
+// Incorrect — K&R / "same-line" brace
+void setup() {
+  Serial.begin(115200);
+}
+```
+
+### Indentation
+
+2 spaces (the Arduino IDE default). Do not use tabs.
+
+### Line Length
+
+Wrap all lines at **76 characters**, same as MATLAB. Long `if`
+conditions should be broken across lines with continuation indented
+to align past the opening `(`:
+
+```cpp
+// Correct
+if (isCurrStanceL != isPrevStanceL
+    && timeSinceStanceChangeL > timeDebounce
+    && timeSinceStanceChangeR > timeDebounce)
+{
+  timeStanceChangeL = millis();
+}
+```
+
+### File Header
+
+Every `.ino` file must open with a `//` comment block:
+
+```cpp
+// triggerStimWithGaitStateMachine_SpeedIndependent.ino
+// One-line description of what this sketch does.
+//
+// Longer description: protocol context, key design decisions,
+// dependencies (MATLAB controller, hardware).
+//
+// Date started: DD Mon. YYYY
+// Authors: Initials or full names
+```
+
+### Function Comments
+
+Place a `//` comment block immediately above each non-trivial
+function. The section separator `// --- Name ---` alone is
+sufficient for trivial getters or wrappers; anything with logic
+gets a brief description:
+
+```cpp
+// --- Median Filter ---
+// Takes numSamples analog readings from pin, sorts them, and
+// returns the median. Uses bubble sort; numSamples clamped to
+// [1, 9] to prevent stack overflow.
+int medianFilter(int pin, int numSamples)
+{
+  ...
+}
+```
+
+Full Doxygen-style `/** */` blocks are not required.
+
+### Numeric Literals
+
+Write a leading zero: `0.5` not `.5`. Trailing zeros are not
+required (`0.5` is preferred over `0.50`).
+
+### Loop Variables
+
+`i` and `j` are acceptable loop indices in C++ — there is no
+imaginary-unit concern. The MATLAB restriction on `i`/`j` does
+**not** apply here.
+
+### Named Constants
+
+Unexplained numeric literals must be extracted to `const` with an
+end-of-line comment giving their source or rationale:
+
+```cpp
+// Correct
+const int threshFzUp  = 30;   // stance threshold, upper (DAQ bits)
+const int durStimPulse = 20;  // stimulation pulse duration (ms)
+
+// Incorrect
+if (force > 30) { ... }
+delay(20);
+```
 
 ---
 
