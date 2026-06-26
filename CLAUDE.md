@@ -145,6 +145,33 @@ release.
 - Prefer `fullfile(...)` over string concatenation with `filesep`:
   `fullfile(dir, 'file.mat')` not `[dir filesep 'file.mat']`
 
+### Arduino / C++ (`.ino` files)
+
+See CONTRIBUTING.md "Arduino / C++ Code Style" for full examples.
+
+- **Naming** — camelCase for mutable variables and functions;
+  camelCase for typed `const` variables (e.g., `threshFzUp`,
+  `pinInFzL`); UPPER_SNAKE_CASE for `#define` macros and `enum`
+  constants.
+- **Serial protocol command bytes** — define as named `const int`
+  with an end-of-line comment; bytes are frozen per the H-reflex
+  timing contract — do not change without re-uploading firmware.
+- **Brace style** — Allman: opening `{` on its own line for all
+  functions, `if`, `for`, `while`, and `switch`.
+- **Indentation** — 2 spaces (Arduino IDE default).
+- **Line length** — 76 characters, same as MATLAB.
+- **File header** — required `//` block: filename, one-line
+  description, longer description if needed, date started, authors.
+- **Function comments** — a `//` comment block immediately above
+  each non-trivial function describing its purpose; the section
+  separator `// --- Name ---` alone suffices for trivial ones.
+- **Numeric literals** — write `0.5` not `.5`; trailing zeros
+  (e.g., `0.50`) are not required.
+- **Loop variables** — `i` and `j` are acceptable in C++ (no
+  imaginary-unit concern; the MATLAB restriction does not apply).
+- **Named constants** — same rule as MATLAB: unexplained numeric
+  literals must be `const` with an end-of-line source comment.
+
 ## Documentation Comments
 Every function requires a standard doc block after the definition line.
 
