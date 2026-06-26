@@ -2,57 +2,110 @@ function [RTOTime,LTOTime,RHSTime,LHSTime,commSendTime,commSendFrame] = ...
     NirsHreflexArduinoOpenLoopWithAudio(velL,velR,FzThreshold, ...
     profilename,numAudioCountDown,isCalibration,oxysoft_present, ...
     hreflex_present,stimL,stimR)
-% This controller is adapted from the open loop controller with audio
-% feedback. NIRS events for tied, ramp, split, rest (optional, if exists,
-% always rest for 20 seconds) have been added. This function sends whether
-% or not to stimulate on the current stride to the Arduino running the gait
-% event state machine to more precisely stimulate at the desired percentage
-% of the single stance phase. When to do the NIRS event is determined by
-% parsing the velocity profiel (0 speeds are treated as rest)
+%NIRSHREFLEXARDUINOOPENLOOPWITHAUDIO Open loop split-belt controller with
+%fNIRS event markers, audio feedback, and Arduino-timed H-reflex
+%stimulation.
 %
-% ---------- Open Loop Controller Documentation ----------
-% This function takes two speed arrays (one for each treadmill belt) and
-% updates the belt speed upon ipsilateral toe-off. The function updates the
-% belts alternatively (i.e., a single belt speed cannot be updated twice
-% without the other being updated). The first value for 'velL' and 'velR'
-% is the initial desired speed, and new speeds will be sent for the
-% following N-1 steps, where N is the length of 'velL'.
-% 'numAudioCountDown': how many count downs to perform, default [-1], means
-% do count down at the end. Will play audio "Treadmill will start in 3 - 2
-% - 1 - now" at the beginning, and "Treadmill will stop in 3 - 2 - 1 - now"
-% at the end. For trials with a change of speed in between, the
-% numAudioCountDown would be an array of what stride the speed will change,
-% appended with -1, for example [25,225,-1] means to play count down for
-% speed change at stride 25 and 225, and then at also count down for
-% treadmill start and stop. The last -1 is required in the array.
-%Feature Improvement TODO: at this point, the arguments: isCalibration,
-%oxysoft_present, hreflex_present are not really accesible when going
-%through the UI flow of using AdaptationGUI, it's only setible via code and
-%setting params to be global.
+%   This is adapted from the open loop controller with audio feedback.
+%   NIRS events for tied, ramp, split, rest (optional, if exists, always
+%   rest for 20 seconds) are added. When to log a NIRS event is
+%   determined by parsing velL/velR (0 speeds are treated as rest; the
+%   parse also finds tied, ramp, split, and post segments).
+%
+%   H-reflex stimulation timing is split between this controller and the
+%   Arduino running
+%   HreflexStimArduino/triggerStimWithGaitStateMachine_SpeedIndependent/.
+%   The Arduino owns the precise 50%-single-stance pulse timing: it runs
+%   its own gait-event state machine and fires the stimulus locally. This
+%   controller sends serial command 0 once (before the main loop) to
+%   start the Arduino's state machine, sends a per-stride gate byte (1 =
+%   stim left, 2 = stim right) at single-stance onset to flag which leg
+%   to stimulate, and sends command 3 (in the closing routine) to stop
+%   the Arduino's state machine. Do not change these command bytes
+%   without re-uploading compatible Arduino firmware.
+%
+%   --- Doc from the open loop controller (controlSpeedWithSteps_edit1
+%   with audio countdown) ---
+%   This function takes two vectors of speeds (one for each treadmill
+%   belt) and successively updates the belt speed upon ipsilateral
+%   toe-off. The function only updates the belts alternately, i.e., a
+%   single belt speed cannot be updated twice without the other being
+%   updated. The first value for velL and velR is the initial desired
+%   speed, and new speeds will be sent for the following N-1 steps,
+%   where N is the length of velL.
+%
+%   Feature Improvement TODO: at this point, the arguments isCalibration,
+%   oxysoft_present, hreflex_present are not really accessible when going
+%   through the UI flow of using AdaptationGUI; they are only settable
+%   via code and setting params to be global.
+%
+% Inputs:
+%   velL - Nx1 left belt speed profile (mm/s); NaN entries are
+%          self-paced strides
+%   velR - Nx1 right belt speed profile (mm/s); NaN entries are
+%          self-paced strides
+%   FzThreshold - force-plate stance threshold (N); overridden to a
+%          robust hard floor inside the function regardless of input
+%   profilename - name used for the saved datlog filename
+%   numAudioCountDown - stride indices at which to play a 3-2-1 audio
+%          countdown before a speed change, terminated by -1 (count down
+%          at treadmill start/stop only)
+%   isCalibration - true for an H-reflex calibration trial (disables
+%          fNIRS, plays per-side calibration audio instead of NIRS cues)
+%   oxysoft_present - true to connect to Oxysoft fNIRS software
+%   hreflex_present - true to open the Arduino serial port and run
+%          H-reflex stimulation
+%   stimL - Nx1 logical/numeric flag of which left strides to stimulate;
+%          empty selects every 10th stride
+%   stimR - Nx1 logical/numeric flag of which right strides to
+%          stimulate; empty selects every 10th stride
+%
+% Outputs:
+%   RTOTime - right toe-off timestamps (datenum) per stride
+%   LTOTime - left toe-off timestamps (datenum) per stride
+%   RHSTime - right heel-strike timestamps (datenum) per stride
+%   LHSTime - left heel-strike timestamps (datenum) per stride
+%   commSendTime - treadmill command send timestamps (clock vectors)
+%   commSendFrame - frame numbers at treadmill command send
+%
+% Toolbox Dependencies: None
+%
+% See also NIRSHREFLEXOPENLOOPWITHAUDIO, HREFLEXOGWITHAUDIO, GETPAYLOAD.
 
-%% Input Handling Using 'inputParser'
-% NOTE: ONLY CHANGE THESE PARAMETERS IF YOU KNOW WHAT YOU ARE DOING
-p = inputParser;
-addRequired(p,'velL',@(x) isnumeric(x) && ~isempty(x));
-addRequired(p,'velR',@(x) isnumeric(x) && ~isempty(x));
-addRequired(p,'FzThreshold',@(x) isnumeric(x) && isscalar(x));
-addRequired(p,'profilename',@ischar);
-addRequired(p,'numAudioCountDown',@(x) isnumeric(x));
-addOptional(p,'isCalibration',false,@islogical);
-addOptional(p,'oxysoft_present',true,@islogical);
-addOptional(p,'hreflex_present',true,@islogical);
-addOptional(p,'stimL',zeros(numel(velL),1),@isnumeric);
-addOptional(p,'stimR',zeros(numel(velR),1),@isnumeric);
-parse(p,velL,velR,FzThreshold,profilename,numAudioCountDown, ...
-    isCalibration,oxysoft_present,hreflex_present,stimL,stimR);
+arguments
+    % FzThreshold has no default here even though the body always
+    % overrides it to 100 a few lines down: it must stay required because
+    % 'profilename'/'numAudioCountDown' are required positional arguments
+    % that follow it (required arguments cannot follow optional ones).
+    velL              (:,1) double
+    velR              (:,1) double
+    FzThreshold       (1,1) double
+    profilename       (1,:) char
+    numAudioCountDown (1,:) double
+    isCalibration     (1,1) logical = false
+    oxysoft_present   (1,1) logical = true
+    hreflex_present   (1,1) logical = true
+    stimL             (:,1) double = []
+    stimR             (:,1) double = []
+end
 
-isCalibration   = p.Results.isCalibration;
-oxysoft_present = p.Results.oxysoft_present;
-hreflex_present = p.Results.hreflex_present;
-stimL           = p.Results.stimL;
-stimR           = p.Results.stimR;
+% argument-dependent defaults: an empty stimL/stimR means "no explicit
+% per-stride stim schedule was provided", handled below via stimInterval
+if isempty(stimL)
+    stimL = zeros(numel(velL),1);
+end
+
+if isempty(stimR)
+    stimR = zeros(numel(velR),1);
+end
 
 %% Open Arduino Serial Communication (If H-reflex Is Enabled)
+%These parameters should ONLY BE CHANGED IF YOU KNOW WHAT YOU ARE DOING.
+percentSS2Stim = 0.50; % target fraction of single stance for the stim (diagnostic only; Arduino applies its own copy of this target)
+alpha          = 0.9;  % MATLAB-side smoothing factor for estSSL/R (diagnostic only, 0 < alpha <= 1)
+estSSLInit     = 396.6; % initial single-stance duration estimate (ms); from Liu et al. 2014 normative gait data, see Arduino sketch header for derivation
+estSSRInit     = 396.6;
+
 if hreflex_present
     try
         % configure and open serial port communication with Arduino
@@ -78,28 +131,17 @@ if hreflex_present
         CalibAudioR = audioplayer(audio_data,audio_fs);
     end
 
-    % ensure stimulation arrays exist
-    if ~(exist('stimL','var') && exist('stimR','var'))
-        stimL = false(numel(velL),1);
-        stimR = false(numel(velR),1);
+    if any(stimL) || any(stimR)
+        % an explicit per-stride stim schedule was provided
+        stimInterval = nan;
+    else
+        stimInterval = 10;  % stimulate every 10 strides
     end
-
-    % initialize stimulation control variables
-    shouldStimR = logical(stimR);
-    shouldStimL = logical(stimL);
-end
-
-%% Start Arduino State Machine
-if hreflex_present
-    try         % send command to Arduino to start state machine
-        fprintf('Sending start command to Arduino state machine...\n');
-        write(portArduino,0,'int16');    % reset step counters & start
-        fprintf('Start command sent successfully.\n');
-    catch ME
-        % handle any potential communication errors
-        warning(ME.identifier,['Failed to send start command to ' ...
-            'Arduino: %s'],ME.message);
-    end
+    canStim = false; % latches true at single-stance onset; allows exactly one gate send per stance
+    estSSL = estSSLInit; % running estimate of left single-stance duration (ms, diagnostic only)
+    estSSR = estSSRInit;
+    stimDelayL = now(); % diagnostic-only target delay, logged alongside each stim
+    stimDelayR = now();
 end
 
 %% Load GUI Handle and Audio Files for Countdown
@@ -151,9 +193,9 @@ disp('Initial Setup');
 %set up audio players
 audioids = {'relax','rest','stopAndRest','TMStartNow'};
 instructions = containers.Map();
-for i = 1:length(audioids)
-    [audio_data,audio_fs] = audioread([audioids{i} '.mp3']);
-    instructions(audioids{i}) = audioplayer(audio_data,audio_fs);
+for ii = 1:length(audioids)
+    [audio_data,audio_fs] = audioread([audioids{ii} '.mp3']);
+    instructions(audioids{ii}) = audioplayer(audio_data,audio_fs);
 end
 
 %this should be changed if the protocol is changing to no ramp, straight to
@@ -179,11 +221,8 @@ if length(restSteps) > 1 %at least 2 rest exist, then ask which one to start fro
         restSteps = restSteps(trainIdx:end);
         velL = velL(restSteps(1):end,:);    % only keep portions of profile that's after the starting rest.
         velR = velR(restSteps(1):end,:);
-        if exist('stimL','var') && exist('stimR','var')
-            % TODO: delete below or update 'shouldStimL', 'shouldStimR' too
-            stimL = stimL(restSteps(1):end,:); %only keep portions of profile that's after the starting rest.
-            stimR = stimR(restSteps(1):end,:);
-        end
+        stimL = stimL(restSteps(1):end,:); %only keep portions of profile that's after the starting rest.
+        stimR = stimR(restSteps(1):end,:);
         % parse new 'velL' and 'velR' again to get correct event steps and index
         [nirsEventSteps,nirsEventNames] = parseEventsFromSpeeds(velL(:,1),velR(:,1));
         restIdx = strcmp(nirsEventNames,'Rest');
@@ -212,7 +251,7 @@ nextNirsEventIdx = 1;
 
 %% Initialize Data Logging Structure (Preallocated)
 datlog = struct();
-datlog.buildtime = datetime('now');
+datlog.buildtime = now(); % timestamp
 temp = datestr(datlog.buildtime,'yyyy_mm_dd_HH_MM_SS');
 [d,n] = fileparts(which(mfilename));
 savename = fullfile(d,'..','datlogs',[temp '_' profilename]);
@@ -245,6 +284,15 @@ datlog.audioCues.audio_instruction_message = {};
 datlog.stim.header = {'Step#','StimDelayTarget(SerialDate#)','TimeSinceContraTOSerialDate#)'};
 datlog.stim.L = [];
 datlog.stim.R = [];
+% Loop-timing diagnostics (additive; NOT consumed by labTools/SyncDatalog).
+% loopSegMs columns: [iterTotal, drawnow/GUI, Vicon read+interop, control+
+% stim], all in ms. gateLeadMs* record (gate send time - single-stance
+% onset time), i.e., how soon after onset MATLAB flagged the stride to
+% the Arduino, in ms.
+datlog.diagnostics.header = {'iterTotalMs','guiMs','viconMs','ctrlMs'};
+datlog.diagnostics.loopSegMs = zeros(numFramesEst,4);
+datlog.diagnostics.gateLeadMsL = [];
+datlog.diagnostics.gateLeadMsR = [];
 
 %do initial save
 try
@@ -254,16 +302,13 @@ catch ME
 end
 
 %% Force Plate Threshold Setup
-if nargin < 3
-    % TODO: Left force plate is getting very noisy. 30N is not enough to be robust.
-    FzThreshold = 100; % Newtons (30 is minimum for noise not to be an issue)
-elseif FzThreshold < 30
-    % warning = ['Warning: Fz threshold too low to be robust to noise, using 30N instead'];
+if FzThreshold < 30
     datlog.messages{end+1,1} = 'Warning: Fz threshold too low to be robust to noise, using 30N instead';
     disp('Warning: Fz threshold too low to be robust to noise, using 30N instead');
 end
 
-FzThreshold = 100; % impose 100 threshold because the force plates noise is +-60N sometimes.
+forcePlateRobustThreshold = 100; % N; force plates are noisy (+-60N), so this floor is always imposed below
+FzThreshold = forcePlateRobustThreshold;
 datlog.messages{end+1,1} = 'Fz threshold is set to 100N for robust noise handling';
 disp('Fz threshold is set to 100N for robust noise handling');
 
@@ -277,7 +322,7 @@ end
 %% Initialize Nexus & Treadmill Communications
 try
     HostName = 'localhost:801';
-    addpath('..\\dotNET');
+    addpath('..\dotNET');
     dssdkAssembly = which('ViconDataStreamSDK_DotNET.dll');
     if isempty(dssdkAssembly)
         [file,path] = uigetfile('*.dll');
@@ -300,9 +345,9 @@ catch ME
 end
 
 try
-    fprintf('Open TM Comm. Date Time: %s\n',datestr(datetime('now'),'yyyy-mm-dd HH:MM:SS:FFF'));
+    fprintf('Open TM Comm. Date Time: %s\n',datestr(now(),'yyyy-mm-dd HH:MM:SS:FFF'));
     t = openTreadmillComm();
-    fprintf('Done Opening. Date Time: %s\n',datestr(datetime('now'),'yyyy-mm-dd HH:MM:SS:FFF'));
+    fprintf('Done Opening. Date Time: %s\n',datestr(now(),'yyyy-mm-dd HH:MM:SS:FFF'));
 catch ME
     disp('Error creating TCP connection to Treadmill. See datlog for details.');
     datlog.errormsgs{end+1} = 'Error creating TCP connection to Treadmill.';
@@ -312,9 +357,7 @@ end
 
 try     % so that if something fails, communications are closed properly
     MyClient.GetFrame();
-    % listbox{end+1} = ['Nexus and Bertec Interfaces initialized: ' num2str(clock)];
-    datlog.messages(end+1,:) = {'Nexus and Bertec Interfaces initialized: ',datetime('now')};
-    % set(ghandle.listbox1,'String',listbox);
+    datlog.messages(end+1,:) = {'Nexus and Bertec Interfaces initialized: ',now()};
 
     % initialize trial variables
     new_stanceL = false;
@@ -322,31 +365,31 @@ try     % so that if something fails, communications are closed properly
     phase = 0; % 0 = Double Support, 1 = single L support, 2 = single R support
     LstepCount = 1;
     RstepCount = 1;
-    RTOTime(N) = datetime('now');
-    LTOTime(N) = datetime('now');
-    RHSTime(N) = datetime('now');
-    LHSTime(N) = datetime('now');
+    RTOTime(N) = now();
+    LTOTime(N) = now();
+    RHSTime(N) = now();
+    LHSTime(N) = now();
     commSendTime = zeros(2*N-1,6);
     commSendFrame = zeros(2*N-1,1);
 
     [RBS,LBS,cur_incl] = readTreadmillPacket(t); % read treadmill incline angle
-    lastRead = datetime('now');
+    lastRead = now();
     datlog.inclineang = cur_incl;
     read_theta = cur_incl;
 
     % Nimbus start sync
     % create file on hard drive, then delete later after task is finished
-    t1 = datetime('now');
+    time1 = now();
     syncname = fullfile(tempdir,'SYNCH.dat');
     fid = fopen(syncname,'wb');
     fclose(fid);
-    t2 = datetime('now');
-    fprintf('Sync file creation time (s): %.3f\n',seconds(t2-t1));
+    time2 = now();
+    fprintf('Sync file creation time (s): %.3f\n',etime(datevec(time2),datevec(time1)));
 
     % audio countdown
     % if no rest (regular adapt block) or 1st stride speed is non 0, start with audio count down.
     if (isempty(restSteps) || velL(1,1) ~=0) && numAudioCountDown %No rest, will start right away. Add a 3-2-1 count down.
-        fprintf('Ready to count down. Date Time: %s\n',datestr(datetime('now'),'yyyy-mm-dd HH:MM:SS:FFF'));
+        fprintf('Ready to count down. Date Time: %s\n',datestr(now(),'yyyy-mm-dd HH:MM:SS:FFF'));
         play(AudioTMStart3);
         pause(2.5);
         play(AudioCount2);
@@ -362,11 +405,28 @@ try     % so that if something fails, communications are closed properly
     acc = 1500; %used to be 3500, made it smaller for start to be more smooth, 1500 would achieve 1.5m/s in 1second, which is beyond the expected max speed we will ever use in this protocol.
     payload = getPayload(velR(1,1),velL(1,1),acc,acc,cur_incl);
     sendTreadmillPacket(payload,t);
-    datlog.TreadmillCommands.firstSent = [velR(RstepCount,1) velL(LstepCount,1) acc acc cur_incl now];
+    datlog.TreadmillCommands.firstSent = [velR(RstepCount,1) velL(LstepCount,1) acc acc cur_incl now()];
     commSendTime(1,:) = clock;
-    datlog.TreadmillCommands.sent(1,:) = [velR(RstepCount,1) velL(LstepCount,1) cur_incl now];
-    datlog.messages(end+1,:) = {'First speed command sent',datetime('now')};
+    datlog.TreadmillCommands.sent(1,:) = [velR(RstepCount,1) velL(LstepCount,1) cur_incl now()];
+    datlog.messages(end+1,:) = {'First speed command sent',now()};
     datlog.messages{end+1,1} = ['Lspeed = ' num2str(velL(LstepCount,1)) ', Rspeed = ' num2str(velR(RstepCount,1))];
+
+    %% Start Arduino State Machine
+    % Send this right before walking starts (not immediately after opening
+    % the serial port) so the Arduino's step/phase counters reset close to
+    % actual walking onset instead of sitting idle through NIRS setup and
+    % the audio countdown above, which could otherwise skew the first
+    % estSSL/estSSR estimate with spurious phase transitions.
+    if hreflex_present
+        try
+            fprintf('Sending start command to Arduino state machine...\n');
+            write(portArduino,0,'int16');    % reset step counters & start
+            fprintf('Start command sent successfully.\n');
+        catch ME
+            warning(ME.identifier,['Failed to send start command to ' ...
+                'Arduino: %s'],ME.message);
+        end
+    end
 
     %% Main Loop
     old_velR = libpointer('doublePtr',velR(1,1));
@@ -388,11 +448,25 @@ try     % so that if something fails, communications are closed properly
         prevChangeTime = datetime('now');
     end
 
+    loopCount = 0;          % number of completed main-loop iterations
+    lastUIUpdate = now();   % last time belt-speed textboxes were refreshed
+    handrailHigh = false;   % current handrail-force warning color state
+    % Reusable per-leg marker lines: append a point per heel strike via
+    % addpoints instead of creating a new plot object every stride (which
+    % accumulated thousands of objects and inflated drawnow within a trial).
+    % profileaxes has hold on and legend AutoUpdate off (see manualLoadProfile)
+    hAnimMarkR = animatedline(ghandle.profileaxes,'LineStyle','none', ...
+        'Marker','o','MarkerFaceColor',[1 0.6 0.78], ...
+        'MarkerEdgeColor','r');
+    hAnimMarkL = animatedline(ghandle.profileaxes,'LineStyle','none', ...
+        'Marker','o','MarkerFaceColor',[0.68 0.92 1], ...
+        'MarkerEdgeColor','b');
+
     while ~STOP     % only runs trial loop if stop button is not pressed
         while PAUSE % only runs if pause button is pressed
             pause(0.2);
-            datlog.messages(end+1,:) = {'Loop paused at ',datetime('now')};
-            disp(['Paused at ' datestr(datetime('now'),'HH:MM:SS')]);
+            datlog.messages(end+1,:) = {'Loop paused at ',now()};
+            disp(['Paused at ' num2str(clock)]);
             % bring treadmill to a stop and keep it there!...
             payload = getPayload(0,0,500,500,cur_incl);
             sendTreadmillPacket(payload,t);
@@ -405,38 +479,50 @@ try     % so that if something fails, communications are closed properly
             old_velR.Value = 1; % change the old values so that the treadmill knows to resume when the pause button is resumed
             old_velL.Value = 1;
         end
-        drawnow;
+        tIter = tic;            % start per-iteration loop timer
+        tSeg = tic;
+        drawnow limitrate;      % throttle redraws; still flushes UI callbacks
+        segGuiMs = toc(tSeg)*1000;
+        tSeg = tic;
         old_stanceL = new_stanceL;
         old_stanceR = new_stanceR;
 
         % read frame, update necessary structures
         MyClient.GetFrame();
         framenum.Value = MyClient.GetFrameNumber().FrameNumber;
-        datlog.framenumbers.data(frameind.Value,:) = [framenum.Value now];
+        datlog.framenumbers.data(frameind.Value,:) = [framenum.Value now()];
 
-        % read treadmill data efficiently if at least 0.1 s has elapsed
-        if seconds(datetime('now') - lastRead) > 0.1
-            [RBS,LBS,read_theta] = readTreadmillPacket(t);  % TM data
-            lastRead = datetime('now');
+        % read treadmill, if enough time has elapsed since last read
+        if (now() - lastRead)*86400 > 0.1     % only read if enough time has elapsed
+            [RBS,LBS,read_theta] = readTreadmillPacket(t);  % also read what the treadmill is doing
+            lastRead = now();
         end
-        datlog.TreadmillCommands.read(frameind.Value,:) = [RBS LBS read_theta now];
-        set(ghandle.RBeltSpeed_textbox,'String',num2str(RBS/1000));
-        set(ghandle.LBeltSpeed_textbox,'String',num2str(LBS/1000));
+        datlog.TreadmillCommands.read(frameind.Value,:) = [RBS LBS read_theta now()];
+        % throttle textbox refresh to limit per-iteration graphics work
+        if (now() - lastUIUpdate)*86400 > 0.1     % refresh at ~10 Hz
+            set(ghandle.RBeltSpeed_textbox,'String',num2str(RBS/1000));
+            set(ghandle.LBeltSpeed_textbox,'String',num2str(LBS/1000));
+            lastUIUpdate = now();
+        end
         frameind.Value = frameind.Value + 1;
 
-        % capture force plate data efficiently
+        % capture force plate data
         Fz_R = MyClient.GetDeviceOutputValue('Right Treadmill','Fz');
         Fz_L = MyClient.GetDeviceOutputValue('Left Treadmill','Fz');
-        datlog.forces.data(frameind.Value,:) = [framenum.Value now Fz_R.Value Fz_L.Value];
+        datlog.forces.data(frameind.Value,:) = [framenum.Value now() Fz_R.Value Fz_L.Value];
         Hx = MyClient.GetDeviceOutputValue('Handrail','Fx');
         Hy = MyClient.GetDeviceOutputValue('Handrail','Fy');
         Hz = MyClient.GetDeviceOutputValue('Handrail','Fz');
         Hm = sqrt(Hx.Value^2+Hy.Value^2+Hz.Value^2);
-        %if handrail force is too high, notify the experimentor
-        if Hm > 25
+        %if handrail force is too high, notify the experimentor; only update
+        %the color on a state change to avoid dirtying the figure every loop
+        handrailForceThreshold = 25; % N; above this, warn the experimenter via figure color
+        if (Hm > handrailForceThreshold) && ~handrailHigh
             set(ghandle.figure1,'Color',[238 5 5]./255);
-        else
+            handrailHigh = true;
+        elseif (Hm <= handrailForceThreshold) && handrailHigh
             set(ghandle.figure1,'Color',[1 1 1]);
+            handrailHigh = false;
         end
 
         %% This section was on
@@ -450,10 +536,8 @@ try     % so that if something fails, communications are closed properly
             end
         end
         %%
-        % read from treadmill
-        % [RBS,LBS,theta] = getCurrentData(t);
-        % set(ghandle.LBeltSpeed_textbox,'String',num2str(LBS/1000));
-        % set(ghandle.RBeltSpeed_textbox,'String',num2str(RBS/1000));
+        segViconMs = toc(tSeg)*1000;    % Vicon read + interop segment
+        tSeg = tic;                     % start control + stim segment
 
         % gait event detection
         new_stanceL = Fz_L.Value < -FzThreshold;
@@ -469,95 +553,127 @@ try     % so that if something fails, communications are closed properly
                 if RTO      % advance to single stance L
                     phase = 1;
                     RstepCount = RstepCount + 1;
-                    RTOTime(RstepCount) = datetime('now');
-                    datlog.stepdata.RTOdata(RstepCount-1,:) = [RstepCount-1 now framenum.Value];
-                    set(ghandle.RBeltSpeed_textbox,'String',num2str(velR(RstepCount,1)/1000));
+                    RTOTime(RstepCount) = now();
+                    datlog.stepdata.RTOdata(RstepCount-1,:) = [RstepCount-1 now() framenum.Value];
                 elseif LTO  % advance to single stance R
                     phase = 2;
                     LstepCount = LstepCount + 1;
-                    LTOTime(LstepCount) = datetime('now');
-                    datlog.stepdata.LTOdata(LstepCount-1,:) = [LstepCount-1 now framenum.Value];
-                    set(ghandle.LBeltSpeed_textbox,'String',num2str(velL(LstepCount,1)/1000));
+                    LTOTime(LstepCount) = now();
+                    datlog.stepdata.LTOdata(LstepCount-1,:) = [LstepCount-1 now() framenum.Value];
                 end
             case 1          % single stance L
                 if RHS      % advance to double stance
                     phase = 3;
-                    RHSTime(RstepCount) = datetime('now');
-                    datlog.stepdata.RHSdata(RstepCount-1,:) = [RstepCount-1 now framenum.Value];
+                    RHSTime(RstepCount) = now();
+                    datlog.stepdata.RHSdata(RstepCount-1,:) = [RstepCount-1 now() framenum.Value];
+                    % RHS marks the end of single stance L
+                    % compute duration of left leg single stance phase
+                    durSSL = RHSTime(RstepCount) - RTOTime(RstepCount);
+                    % estimate single stance duration using exponential updating factor
+                    estSSL = alpha * durSSL + (1.0 - alpha) * estSSL;
+                    stimDelayL = estSSL * percentSS2Stim;
                     set(ghandle.Right_step_textbox,'String',num2str(RstepCount-1));
                     % plot cursor
-                    plot(ghandle.profileaxes,RstepCount-1,velR(RstepCount,1)/1000,'o','MarkerFaceColor',[1 0.6 0.78],'MarkerEdgeColor','r');
-                    drawnow;
+                    addpoints(hAnimMarkR,RstepCount-1,velR(RstepCount,1)/1000);
+                    canStim = true; % single stance R is about to begin; allow its onset gate to fire
 
                     if LTO %In case DS is too short and a full cycle misses the phase switch
                         phase = 2;
                         LstepCount = LstepCount + 1;
-                        LTOTime(LstepCount) = datetime('now');
-                        datlog.stepdata.LTOdata(LstepCount-1,:) = [LstepCount-1 now framenum.Value];
-                        set(ghandle.LBeltSpeed_textbox,'String',num2str(velL(LstepCount,1)/1000));
+                        LTOTime(LstepCount) = now();
+                        datlog.stepdata.LTOdata(LstepCount-1,:) = [LstepCount-1 now() framenum.Value];
                     end
                 end
             case 2          % single stance R
                 if LHS      % advance to double stance
                     phase = 4;
-                    LHSTime(LstepCount) = datetime('now');
-                    datlog.stepdata.LHSdata(LstepCount-1,:) = [LstepCount-1 now framenum.Value];
+                    LHSTime(LstepCount) = now();
+                    datlog.stepdata.LHSdata(LstepCount-1,:) = [LstepCount-1 now() framenum.Value];
+                    % LHS marks the end of single stance R
+                    % compute duration of right leg single stance phase
+                    durSSR = LHSTime(LstepCount) - LTOTime(LstepCount);
+                    % estimate single stance duration using exponential updating factor
+                    estSSR = alpha * durSSR + (1.0 - alpha) * estSSR;
+                    stimDelayR = estSSR * percentSS2Stim;
                     set(ghandle.Left_step_textbox,'String',num2str(LstepCount-1));
                     % plot cursor
-                    plot(ghandle.profileaxes,LstepCount-1,velL(LstepCount,1)/1000,'o','MarkerFaceColor',[0.68 .92 1],'MarkerEdgeColor','b');
-                    drawnow;
+                    addpoints(hAnimMarkL,LstepCount-1,velL(LstepCount,1)/1000);
+                    canStim = true; % single stance L is about to begin; allow its onset gate to fire
 
                     if RTO %In case DS is too short and a full cycle misses the phase switch
                         phase = 1;
                         RstepCount = RstepCount + 1;
-                        RTOTime(RstepCount) = datetime('now');
-                        datlog.stepdata.RTOdata(RstepCount-1,:) = [RstepCount-1 now framenum.Value];
-                        set(ghandle.RBeltSpeed_textbox,'String',num2str(velR(RstepCount,1)/1000));
+                        RTOTime(RstepCount) = now();
+                        datlog.stepdata.RTOdata(RstepCount-1,:) = [RstepCount-1 now() framenum.Value];
                     end
                 end
             case 3          % double stance, coming from single stance L
                 if LTO      % advance to single stance R
                     phase = 2;
                     LstepCount = LstepCount + 1;
-                    LTOTime(LstepCount) = datetime('now');
-                    datlog.stepdata.LTOdata(LstepCount-1,:) = [LstepCount-1 now framenum.Value];
-                    % set(ghandle.LBeltSpeed_textbox,'String',num2str(velL(LstepCount)/1000));
+                    LTOTime(LstepCount) = now();
+                    datlog.stepdata.LTOdata(LstepCount-1,:) = [LstepCount-1 now() framenum.Value];
                 end
             case 4          % double stance, coming from single stance R
                 if RTO      % advance to single stance L
                     phase = 1;  % advance to L single stance
                     RstepCount = RstepCount + 1;
-                    RTOTime(RstepCount) = datetime('now');
-                    datlog.stepdata.RTOdata(RstepCount-1,:) = [RstepCount-1 now framenum.Value];
-                    % set(ghandle.RBeltSpeed_textbox,'String',num2str(velR(RstepCount)/1000));
+                    RTOTime(RstepCount) = now();
+                    datlog.stepdata.RTOdata(RstepCount-1,:) = [RstepCount-1 now() framenum.Value];
                 end
         end
 
-        % send stimulation commands via Arduino (if enabled)
         if hreflex_present      % only do this if has the stimulator
-            if shouldStimR(RstepCount)
+            % use contralateral leg (i.e., LHS - LTO) to determine R mid-single stance
+            timeSinceLTO = now() - LTOTime(LstepCount);
+            if isnan(stimInterval)
+                shouldStimR = logical(stimR(RstepCount));
+                shouldStimL = logical(stimL(LstepCount));
+            else
+                shouldStimR = mod(RstepCount,stimInterval) == 4;
+                shouldStimL = mod(LstepCount,stimInterval) == 4;
+            end
+
+            % Send the gate at single-stance onset: the Arduino owns the
+            % precise 50%-single-stance timing, so MATLAB only needs to flag
+            % the stride early. Waiting until mid-stance left too little
+            % margin and caused late or missed stims under control-loop
+            % jitter.
+            if (shouldStimR && phase == 2 && canStim)
+                if isCalibration    % play sound
+                    play(CalibAudioR);
+                end
+
                 try         % send command to Arduino to stimulate right
-                    write(portArduino,2,'int16');
-                    shouldStimR(RstepCount) = false;    % prevent re-stim
+                    write(portArduino,2,'int16'); % hard-coded here and in Arduino. Don't change this.
                 catch ME
-                    % handle any potential communication errors
                     warning(ME.identifier,['Failed to send right leg ' ...
                         'stimulation command to Arduino: %s'],ME.message);
                 end
-                % TODO: update to read serial port data from the Arduino
-                datlog.stim.R(end+1,:) = RstepCount;
+                canStim = false;
+                datlog.stim.R(end+1,:) = [RstepCount stimDelayR timeSinceLTO];
+                datlog.diagnostics.gateLeadMsR(end+1) = ...
+                    timeSinceLTO*86400000;  % gate lead from LTO (ms)
             end
 
-            if shouldStimL(LstepCount)
+            % use contralateral leg (i.e., RHS - RTO) to determine L mid-single stance
+            timeSinceRTO = now() - RTOTime(RstepCount);
+            if (shouldStimL && phase == 1 && canStim)
+                if isCalibration    % play sound
+                    play(CalibAudioL);
+                end
+
                 try         % send command to Arduino to stimulate left
                     write(portArduino,1,'int16');
-                    shouldStimL(LstepCount) = false;    % prevent re-stim
                 catch ME
-                    % handle any potential communication errors
                     warning(ME.identifier,['Failed to send left leg ' ...
                         'stimulation command to Arduino: %s'],ME.message);
                 end
-                datlog.stim.L(end+1,:) = RstepCount;
+
+                canStim = false;    % prevent immediate re-stimulation
+                datlog.stim.L(end+1,:) = [RstepCount stimDelayL timeSinceRTO];
+                datlog.diagnostics.gateLeadMsL(end+1) = ...
+                    timeSinceRTO*86400000;  % gate lead from RTO (ms)
             end
         end
 
@@ -584,7 +700,7 @@ try     % so that if something fails, communications are closed properly
         if numAudioCountDown %Adapted from open loop audio countdown
             if length(numAudioCountDown) > 1 && speedChangeStride ~= -1 %there is speed change in the middle and there is more change incoming (if -1 means next is TM end)
                 if (LstepCount == speedChangeStride-3 || RstepCount == speedChangeStride-3) && ~countDownPlayed(1+countDownIdxOffset)
-                    fprintf(['Change at ' num2str(speedChangeStride) '-3 Stride . Date Time: ' datestr(datetime('now'),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
+                    fprintf(['Change at ' num2str(speedChangeStride) '-3 Stride . Date Time: ' datestr(now(),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
                     fprintf('Current step count L: %d, R:%d, countDownIdx: %d, idx offset: %d\n',LstepCount,RstepCount,countDownIdx, countDownIdxOffset)
 
                     %log in NIRS that audio count down is happening. FIXME
@@ -594,20 +710,20 @@ try     % so that if something fails, communications are closed properly
                     countDownPlayed(countDownIdx) = true; %This should only be run once
                     countDownIdx = countDownIdx + 1;
                 elseif (LstepCount == speedChangeStride-1 || RstepCount == speedChangeStride-1) && ~countDownPlayed(2+countDownIdxOffset)
-                    fprintf(['Change-2 Stride . Date Time: ' datestr(datetime('now'),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
+                    fprintf(['Change-2 Stride . Date Time: ' datestr(now(),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
                     fprintf('Current step count L: %d, R:%d, countDownIdx: %d, idx offset: %d\n',LstepCount,RstepCount,countDownIdx, countDownIdxOffset)
                     play(AudioCount2);
                     countDownPlayed(countDownIdx) = true; %This should only be run once
                     countDownIdx = countDownIdx + 1;
                 elseif (LstepCount == speedChangeStride || RstepCount == speedChangeStride) && ~countDownPlayed(3+countDownIdxOffset)
-                    fprintf(['Change at ' num2str(speedChangeStride) ' Last Stride . Date Time: ' datestr(datetime('now'),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
+                    fprintf(['Change at ' num2str(speedChangeStride) ' Last Stride . Date Time: ' datestr(now(),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
                     fprintf('Current step count L: %d, R:%d, countDownIdx: %d, idx offset: %d\n',LstepCount,RstepCount,countDownIdx, countDownIdxOffset)
                     disp(countDownPlayed)
                     play(AudioCount1)
                     countDownPlayed(countDownIdx) = true; %This should only be run once
                     countDownIdx = countDownIdx + 1;
                 elseif (LstepCount == speedChangeStride+1 || RstepCount == speedChangeStride+1) && ~countDownPlayed(4+countDownIdxOffset)
-                    fprintf(['Change Stride +1. Date Time: ' datestr(datetime('now'),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
+                    fprintf(['Change Stride +1. Date Time: ' datestr(now(),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
                     play(AudioNow)
                     countDownPlayed(countDownIdx) = true; %This should only be run once
                     countDownIdx = countDownIdx + 1;
@@ -626,32 +742,32 @@ try     % so that if something fails, communications are closed properly
 
             if ~countDownPlayed(end-3) && ( ...
                     (nextRestIdx <= length(restSteps) && (LstepCount == restSteps(nextRestIdx)-4 || RstepCount == restSteps(nextRestIdx)-4)))
-                fprintf(['-3 Stride . Date Time: ' datestr(datetime('now'),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
+                fprintf(['-3 Stride . Date Time: ' datestr(now(),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
                 %log in NIRS that audio count down is happening.
                 datlog = nirsEvent('TMStopAudioCountDown', 'D', ['TMStopAudioCountDown_Train' num2str(nextRestIdx-1+trainIdx)], instructions, datlog, Oxysoft, oxysoft_present);
                 play(AudioTMStop3); %takes 2 seconds to say "treadmill will stop in"
                 countDownPlayed(end-3) = true; %This should only be run once
             elseif ~countDownPlayed(end-2) && (...
                     (nextRestIdx <= length(restSteps) && (LstepCount == restSteps(nextRestIdx)-2 || RstepCount == restSteps(nextRestIdx)-2)))
-                fprintf(['-2 Stride . Date Time: ' datestr(datetime('now'),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
+                fprintf(['-2 Stride . Date Time: ' datestr(now(),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
                 play(AudioCount2);
                 countDownPlayed(end-2) = true; %This should only be run once
             elseif ~countDownPlayed(end-1) && (...
                     (nextRestIdx <= length(restSteps) && (LstepCount == restSteps(nextRestIdx)-1 || RstepCount == restSteps(nextRestIdx)-1)))
-                fprintf(['-1 Stride . Date Time: ' datestr(datetime('now'),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
+                fprintf(['-1 Stride . Date Time: ' datestr(now(),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
                 play(AudioCount1);
                 countDownPlayed(end-1) = true; %This should only be run once
             end
 
             %Trial will end soon.
             if (LstepCount == N-3 || RstepCount == N-3) && ~countDownPlayed(end-3)
-                fprintf(['-3 Stride . Date Time: ' datestr(datetime('now'),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
+                fprintf(['-3 Stride . Date Time: ' datestr(now(),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
                 %log in NIRS that audio count down is happening.
                 datlog = nirsEvent('TMStopAudioCountDown','D',['TMStopAudioCountDown_Train' num2str(nextRestIdx-1+trainIdx)],instructions,datlog,Oxysoft,oxysoft_present);
                 play(AudioTMStop3);
                 countDownPlayed(end-3) = true; %This should only be run once
             elseif (LstepCount == N-1 || RstepCount == N-1) && ~countDownPlayed(end-2)
-                fprintf(['-2 Stride . Date Time: ' datestr(datetime('now'),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
+                fprintf(['-2 Stride . Date Time: ' datestr(now(),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
                 play(AudioCount2);
                 countDownPlayed(end-2) = true; %This should only be run once
             end
@@ -659,7 +775,7 @@ try     % so that if something fails, communications are closed properly
 
         if LstepCount >= N || RstepCount >= N%if taken enough steps, stop
             if numAudioCountDown %adapted from open loop audiocoudntdown
-                fprintf(['Last Stride . Date Time: ' datestr(datetime('now'),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
+                fprintf(['Last Stride . Date Time: ' datestr(now(),'yyyy-mm-dd HH:MM:SS:FFF') '\n']);
                 play(AudioCount1);
             end
             break
@@ -667,13 +783,8 @@ try     % so that if something fails, communications are closed properly
         elseif (velR(RstepCount,1) ~= old_velR.Value) || (velL(LstepCount,1) ~= old_velL.Value)% && LstepCount<N && RstepCount<N
             payload = getPayload(velR(RstepCount,1),velL(LstepCount,1),acc,acc,cur_incl);
             sendTreadmillPacket(payload,t);
-            datlog.TreadmillCommands.sent(frameind.Value,:) = [velR(RstepCount,1) velL(LstepCount,1) cur_incl now]; % record the command
+            datlog.TreadmillCommands.sent(frameind.Value,:) = [velR(RstepCount,1) velL(LstepCount,1) cur_incl now()]; % record the command
             disp(['Packet sent, Lspeed = ' num2str(velL(LstepCount,1)) ', Rspeed = ' num2str(velR(RstepCount,1))]);
-            if velR(RstepCount,1) ~= old_velR.Value
-                set(ghandle.RBeltSpeed_textbox,'String',num2str(velR(RstepCount,1)/1000));
-            else %(velL(LstepCount) ~= old_velL.Value)
-                set(ghandle.LBeltSpeed_textbox,'String',num2str(velL(LstepCount,1)/1000));
-            end
         else
             %simply record what the treadmill should be doing
             %datlog.TreadmillCommands.sent(frameind.Value,:) = [velR(RstepCount),velL(LstepCount),cur_incl,now];%record the command
@@ -729,23 +840,19 @@ try     % so that if something fails, communications are closed properly
             need2LogEvent = true;
             nextRestIdx = nextRestIdx + 1;
         end
+
+        % record per-iteration loop-timing diagnostics (additive)
+        loopCount = loopCount + 1;
+        datlog.diagnostics.loopSegMs(loopCount,:) = ...
+            [toc(tIter)*1000, segGuiMs, segViconMs, toc(tSeg)*1000];
     end     % while, when STOP button is pressed
 
-    %% Stop State Machine and Close Communications
-    try         % send command to Arduino to stop state machine
-        fprintf('Sending command to stop the Arduino state machine...\n');
-        write(portArduino,3,'int16');    % stop state machine
-        fprintf('Stop state machine command sent successfully.\n');
-    catch ME
-        % handle any potential communication errors
-        warning(ME.identifier,['Failed to send stop state machine ' ...
-            'commands to Arduino: %s'],ME.message);
-    end
+    % trim unused preallocated diagnostic rows
+    datlog.diagnostics.loopSegMs(loopCount+1:end,:) = [];
 
     if STOP
-        % log time with precision
-        datlog.messages(end+1,:) = {'Stop button pressed at: [see next cell] ,stopping... ',datetime('now')};
-        disp(['Stop button pressed, stopping... ' datestr(datetime('now'),'HH:MM:SS')]);
+        datlog.messages(end+1,:) = {'Stop button pressed at: [see next cell] ,stopping... ',now()};
+        disp(['Stop button pressed, stopping... ' num2str(clock)]);
         set(ghandle.Status_textbox,'String','Stopping...');
         set(ghandle.Status_textbox,'BackgroundColor','red');
     end
@@ -770,15 +877,28 @@ catch ME
     disp(ME);
 end
 
-if hreflex_present      % if hreflex, close communication with arduino
-    datlog.messages(end+1,:) = {'Closing Arduino port...',datetime('now')};
+if hreflex_present      % if hreflex, stop the Arduino state machine and close communication
+    % Sent here (rather than only on the no-error path inside the main
+    % try) so the Arduino's state machine is stopped even if the control
+    % loop above threw an error. handleStimulationTimeout() on the Arduino
+    % runs regardless of the state machine, so any in-flight pulse still
+    % clears safely either way.
+    try
+        fprintf('Sending command to stop the Arduino state machine...\n');
+        write(portArduino,3,'int16');    % stop state machine
+        fprintf('Stop state machine command sent successfully.\n');
+    catch ME
+        warning(ME.identifier,['Failed to send stop state machine ' ...
+            'command to Arduino: %s'],ME.message);
+    end
+
+    datlog.messages(end+1,:) = {'Closing Arduino port...',now()};
     fprintf('Closing Arduino serial port...\n');
     try
         flush(portArduino);     % flush remaining data in the buffer
         delete(portArduino);    % close and clear the serial port object
         fprintf('Arduino serial port closed successfully.\n');
     catch ME
-        % handle errors and log the exception message
         warning(ME.identifier,'Failed to close Arduino port properly: %s',ME.message);
     end
 end
@@ -790,7 +910,7 @@ try % stopping the treadmill
         set(ghandle.Status_textbox,'BackgroundColor','red');
         set(ghandle.figure1,'Color',[1 1 1]);
         pause(0.5); % Pablo I. wrote "Do we need this?"
-        fprintf('Trying to stop treadmill (TM1) at %s\n',datestr(datetime('now'),'yyyy-mm-dd HH:MM:SS:FFF'));
+        fprintf('Trying to stop treadmill (TM1) at %s\n',datestr(now(),'yyyy-mm-dd HH:MM:SS:FFF'));
         smoothStop(t);
         if numAudioCountDown % no need to say now again, changed the logic to say it earlier at stepN
             play(AudioNow);
@@ -800,7 +920,7 @@ try % stopping the treadmill
         set(ghandle.Status_textbox,'String','Stopping');
         set(ghandle.Status_textbox,'BackgroundColor','red');
         pause(0.3);
-        fprintf('Trying to stop treadmill (TM2) at %s\n',datestr(datetime('now'),'yyyy-mm-dd HH:MM:SS:FFF'));
+        fprintf('Trying to stop treadmill (TM2) at %s\n',datestr(now(),'yyyy-mm-dd HH:MM:SS:FFF'));
         smoothStop(t);
     end
 
@@ -812,20 +932,21 @@ try % stopping the treadmill
 
     % check if treadmill stopped, if not, try again:
     pause(1);
-    fprintf('Trying to stop treadmill (TM3) at %s\n',datestr(datetime('now'),'yyyy-mm-dd HH:MM:SS:FFF'));
+    fprintf('Trying to stop treadmill (TM3) at %s\n',datestr(now(),'yyyy-mm-dd HH:MM:SS:FFF'));
     [cur_speedR,cur_speedL,cur_incl] = readTreadmillPacket(t);
     stopped = (cur_speedR == 0) && (cur_speedL == 0);
+    maxStopAttempts = 5;
     counter = 0;
-    while ~stopped && counter < 5   % try 5 times to stop the treadmill smoothly
+    while ~stopped && counter < maxStopAttempts   % try a few times to stop the treadmill smoothly
         disp('Treadmill did not stop as requested. Retrying...');
-        fprintf('Attempt %d to stop treadmill at %s\n',counter,datestr(datetime('now'),'yyyy-mm-dd HH:MM:SS:FFF'));
+        fprintf('Attempt %d to stop treadmill at %s\n',counter,datestr(now(),'yyyy-mm-dd HH:MM:SS:FFF'));
         pause(1);   % give time to smoothStop to execute everything
         [cur_speedR,cur_speedL,cur_incl] = readTreadmillPacket(t);
         stopped = (cur_speedR == 0) && (cur_speedL == 0);
         counter = counter + 1;
     end
-    if counter >= 5
-        disp('Could not stop treadmill after 5 attempts');
+    if counter >= maxStopAttempts
+        disp('Could not stop treadmill after maximum attempts');
     end
 catch ME
     datlog.errormsgs{end+1} = 'Error stopping the treadmill';
@@ -920,4 +1041,3 @@ catch ME
 end
 
 end
-
