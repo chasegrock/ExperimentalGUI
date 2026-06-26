@@ -16,9 +16,10 @@ requirements, see [README.md](README.md).
 1. [Active Experimental Studies](#active-experimental-studies)
 2. [Controller Reference](#controller-reference)
 3. [Creating a New Experimental Protocol](#creating-a-new-experimental-protocol)
-4. [Hardware Setup: Bertec Treadmill](#hardware-setup-bertec-treadmill)
-5. [Hardware Setup: Vicon Nexus 2.12](#hardware-setup-vicon-nexus-212)
-6. [Other Instrumentation](#other-instrumentation)
+4. [External Dependencies and Editable Boundary](#external-dependencies-and-editable-boundary)
+5. [Hardware Setup: Bertec Treadmill](#hardware-setup-bertec-treadmill)
+6. [Hardware Setup: Vicon Nexus 2.12](#hardware-setup-vicon-nexus-212)
+7. [Other Instrumentation](#other-instrumentation)
 
 ---
 
@@ -210,6 +211,69 @@ Run the protocol with a short dummy profile (e.g., 5 strides) in the
 lab with the treadmill at low speed to verify that belt commands,
 data logging, and data transfer all work as expected before involving
 participants.
+
+---
+
+## External Dependencies and Editable Boundary
+
+ExperimentalGUI calls a fair amount of code it does not own. This
+section states what lives in this repo (and may be edited here) versus
+what is a fixed external interface that must be changed upstream. The
+three MATLAB path roots are listed in
+[README.md](README.md#matlab-path-dependencies).
+
+### What this repo owns (editable here)
+
+`AdaptationGUI.m`/`.fig`, everything under `controllers/`, `studies/`,
+and `+utils/`, the top-level helpers (`FindKinHS`, `FindKinTO`,
+`smoothStop`, `parseEventsFromSpeeds`, `manualLoadProfile`, `nirsEvent`,
+the `generate*EventString` helpers, `NBackHelper`, `ISIRandMethod`), and
+the `HreflexStimArduino/` firmware. Edits here are subject to the
+per-study stability rules above (BrainWalk logic frozen; C3 and
+SpinalAdapt require coordination with the lead experimenter).
+
+### Fixed external interfaces (do not edit here; change upstream)
+
+| Interface | Path root / location | Representative symbols |
+|---|---|---|
+| Vicon DataStream SDK (.NET) | `C:\Program Files\Vicon\` | `ViconDataStreamSDK.DotNET.Client`, `MyClient.GetFrame`, `MyClient.GetMarkerGlobalTranslation`, `MyClient.GetDeviceOutputValue` |
+| Bertec treadmill comm layer | `C:\Users\Public\Documents\MATLAB\` (lab PC) | `getPayload`, `sendTreadmillPacket`, `readTreadmillPacket`, `openTreadmillComm`, `getCurrentData` |
+| labTools post-processing | `C:\Users\cntctsml\Documents\GitHub\labTools\` | `dataMotion.processAndFillMarkerGapsSession`, `dataMotion.exportSessionToC3D` |
+| Artinis Oxysoft (fNIRS) COM API | installed application | `actxserver('OxySoft.OxyApplication')` |
+| Arduino H-reflex firmware | running device (source in `HreflexStimArduino/`) | serial `0`/`1`/`2`/`3` handshake |
+
+Changing the treadmill packet contract, the DataStream marker/device
+names, or the `dataMotion.*` signatures requires edits in the lab-PC
+MATLAB tree or the labTools repo — not here. The Arduino serial
+handshake is co-owned with the firmware (see the H-reflex timing
+contract in [README.md](README.md) and `CLAUDE.md`).
+
+### Toolbox requirements
+
+Most controllers and protocols rely only on core MATLAB (audio via
+`audioplayer`/`audioread`, serial via `serialport`, COM/.NET interop via
+`actxserver`/`NET.addAssembly` — none of which require an add-on
+toolbox). The exceptions:
+
+- **Statistics and Machine Learning Toolbox** — required by the N-back
+  ISI generators (`GenerateNBackSequence`, `GenerateNBackSequence_3back`,
+  `NBackHelper`), which use `histfit` and `normrnd`.
+- **Instrument Control Toolbox** — only the legacy `serial()` COM paths
+  in `AdaptationGUI` use it; the active `serialport` API does not.
+
+### Unverified / risk
+
+- The treadmill comm functions (`getPayload`, `sendTreadmillPacket`,
+  `readTreadmillPacket`, `openTreadmillComm`, `getCurrentData`) are
+  **not** in the labTools repo, despite older docs attributing them
+  there. Their assumed home is `C:\Users\Public\Documents\MATLAB\` on the
+  lab PC; this has not been verified from a clean checkout. If that tree
+  is reorganized, the controllers break silently. Confirm with
+  `which getPayload` on the lab PC.
+- `NexusGetFrame` and `openNexusIface` are not found in this repo, in
+  labTools, or in the Vicon SDK naming. They appear only in legacy code
+  paths in `Dulce_grad_betarev2.m` and `SelfSelectedSpeed.m` and are
+  presumed dead or lab-PC-only.
 
 ---
 
