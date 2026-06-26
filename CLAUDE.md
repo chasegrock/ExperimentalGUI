@@ -50,8 +50,9 @@ top. Do not shadow these with local variables. Other globals (`SSspeed`,
 A NaN at position k means stride k is self-paced; the controller holds
 or queries treadmill speed rather than commanding a preset value.
 
-**Treadmill hard limits** — enforced by `getPayload` (labTools):
-speed ±6500 mm/s, acceleration ≤ 3000 mm/s².
+**Treadmill hard limits** — enforced by `getPayload` (treadmill comm
+layer on `C:\Users\Public\Documents\MATLAB\`): speed ±6500 mm/s,
+acceleration ≤ 3000 mm/s².
 
 **datlog fields** — `buildtime` (ISO 8601), `profilename`, `mode`,
 `RTOTime`, `LTOTime`, `RHSTime`, `LHSTime`, `commSendTime`. Saved to
