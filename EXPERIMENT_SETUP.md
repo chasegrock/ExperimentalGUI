@@ -80,6 +80,17 @@ manually between participants because the comfortable overground
 walking speed varies. Calibration trials use
 `NirsHreflexArduinoOpenLoopWithAudio` (menu slot 14).
 
+**H-reflex calibration processing:** After each walking dynamic
+calibration trial, a Vicon Nexus 2.12 processing pipeline runs
+`generateHreflexRecruitmentCurves.m` (`labTools/fun/misc/`) to
+produce recruitment curves in near real time. The script reads the
+open trial via `ViconNexus()` (Nexus MATLAB SDK), loads EMG and
+force-plate data via BTK, and calls helper functions in the
+`+Hreflex` namespace (labTools) to extract M- and H-wave
+amplitudes, fit curves, and save figures to `HreflexCalFigs/`.
+This script is triggered by Nexus — not by ExperimentalGUI. See
+[studies/SpinalAdapt/README.md](studies/SpinalAdapt/README.md).
+
 ---
 
 ## Controller Reference
@@ -236,7 +247,8 @@ SpinalAdapt require coordination with the lead experimenter).
 
 | Interface | Path root / location | Representative symbols |
 |---|---|---|
-| Vicon DataStream SDK (.NET) | `C:\Program Files\Vicon\` | `ViconDataStreamSDK.DotNET.Client`, `MyClient.GetFrame`, `MyClient.GetMarkerGlobalTranslation`, `MyClient.GetDeviceOutputValue` |
+| Vicon DataStream SDK v1.11.0 (`.NET`; `ViconDataStreamSDK_DotNET.dll`) | `C:\Program Files\Vicon\DataStream SDK\Win64\dotNET\` | `ViconDataStreamSDK.DotNET.Client`, `MyClient.GetFrame`, `MyClient.GetMarkerGlobalTranslation`, `MyClient.GetDeviceOutputValue` |
+| Vicon Nexus MATLAB SDK | Installed with Nexus; on lab-PC MATLAB path — **distinct from DataStream SDK** (confirm: `which ViconNexus`) | `ViconNexus` class — used by Nexus pipeline scripts (e.g. `generateHreflexRecruitmentCurves.m`); not called directly by ExperimentalGUI |
 | Bertec treadmill comm layer | `C:\Users\Public\Documents\MATLAB\` (lab PC) | `getPayload`, `sendTreadmillPacket`, `readTreadmillPacket`, `openTreadmillComm`, `getCurrentData` |
 | labTools post-processing | `C:\Users\cntctsml\Documents\GitHub\labTools\` | `dataMotion.processAndFillMarkerGapsSession`, `dataMotion.exportSessionToC3D` |
 | Artinis Oxysoft (fNIRS) COM API | installed application | `actxserver('OxySoft.OxyApplication')` |
@@ -271,9 +283,10 @@ toolbox). The exceptions:
   is reorganized, the controllers break silently. Confirm with
   `which getPayload` on the lab PC.
 - `NexusGetFrame` and `openNexusIface` are not found in this repo, in
-  labTools, or in the Vicon SDK naming. They appear only in legacy code
-  paths in `Dulce_grad_betarev2.m` and `SelfSelectedSpeed.m` and are
-  presumed dead or lab-PC-only.
+  labTools, in the DataStream SDK, or in the Nexus MATLAB SDK naming.
+  They appear only in legacy code paths in `Dulce_grad_betarev2.m` and
+  `SelfSelectedSpeed.m` and are presumed dead or lab-PC-only custom
+  wrappers.
 
 ---
 
@@ -282,7 +295,7 @@ toolbox). The exceptions:
 ### What the Code Provides
 
 - **Communication:** UDP connection initialized once per trial in
-  `sendTreadmillPacket` (from labTools).
+  `sendTreadmillPacket` (external treadmill comm layer).
 - **Packet format:** 64 bytes — 1 format byte, 9 int16 values
   (speedR, speedL, speedRR, speedLL, accR, accL, accRR, accLL,
   incline), 1 checksum byte (255 − sum of data bytes), 27 padding bytes.
