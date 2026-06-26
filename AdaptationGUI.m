@@ -1,32 +1,30 @@
 function varargout = AdaptationGUI(varargin)
-% ADAPTATIONGUI MATLAB code for AdaptationGUI.fig
-%      ADAPTATIONGUI, by itself, creates a new ADAPTATIONGUI or raises the existing
-%      singleton*.
+%ADAPTATIONGUI Launch the treadmill experiment control GUI.
 %
-%      H = ADAPTATIONGUI returns the handle to a new ADAPTATIONGUI or the handle to
-%      the existing singleton*.
+%   Initializes global experiment state, audio players, and keyboard
+%   polling, then lets the experimenter pick a speed profile and a
+%   controller and run a trial. The companion layout is defined in
+%   AdaptationGUI.fig.
 %
-%      ADAPTATIONGUI('CALLBACK',hObject,eventData,handles,...) calls the local
-%      function named CALLBACK in ADAPTATIONGUI.M with the given input arguments.
+% Inputs:
+%   varargin - GUIDE callback-dispatch arguments; either a property/
+%              value list for the figure or a callback name followed by
+%              its arguments (see GUIDATA, GUIHANDLES)
 %
-%      ADAPTATIONGUI('Property','Value',...) creates a new ADAPTATIONGUI or raises the
-%      existing singleton*.  Starting from the left, property value pairs are
-%      applied to the GUI before AdaptationGUI_OpeningFcn gets called.  An
-%      unrecognized property name or invalid value makes property application
-%      stop.  All inputs are passed to AdaptationGUI_OpeningFcn via varargin.
+% Outputs:
+%   varargout - figure handle when called with an output argument, or
+%               the selected callback's return values
 %
-%      *See GUI Options on GUIDE's Tools menu.  Choose "GUI allows only one
-%      instance to run (singleton)".
+% Toolbox Dependencies:
+%   None
 %
-% See also: GUIDE, GUIDATA, GUIHANDLES
-
-% Edit the above text to modify the response to help AdaptationGUI
+% See also GUIDE, GUIDATA, GUIHANDLES.
 
 % Last Modified by GUIDE v2.5 12-Mar-2020 10:14:25
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
-gui_State = struct('gui_Name',       mfilename, ...
+gui_State = struct('gui_Name',       mfilename(), ...
     'gui_Singleton',  gui_Singleton, ...
     'gui_OpeningFcn', @AdaptationGUI_OpeningFcn, ...
     'gui_OutputFcn',  @AdaptationGUI_OutputFcn, ...
@@ -40,11 +38,13 @@ end
 if nargout
     [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
 else
-
     gui_mainfcn(gui_State, varargin{:});
 end
 % End initialization code - DO NOT EDIT
 
+% ============================================================
+% ================ Initialization & Output ===================
+% ============================================================
 
 % --- Executes just before AdaptationGUI is made visible.
 function AdaptationGUI_OpeningFcn(hObject, eventdata, handles, varargin)
@@ -56,52 +56,55 @@ function AdaptationGUI_OpeningFcn(hObject, eventdata, handles, varargin)
 
 % Choose default command line output for AdaptationGUI
 handles.output = hObject;
-movegui(hObject,'northwest');%tell the gui where to position on open
-%Needed variables
+movegui(hObject, 'northwest'); % tell the GUI where to position on open
+
+% Needed variables
 global STOP
-STOP=false;
+STOP = false;
 global PAUSE
-PAUSE=false;
+PAUSE = false;
 global Functionname
-Functionname=1;
+Functionname = 1;
 global InclineAngle
-InclineAngle = 0;%default value, use treadmill with no incline
+InclineAngle = 0; % default value, use treadmill with no incline
 global memory
-memory=0;
+memory = 0;
 global addLog
-addLog.keypress=cell(1e4,2);
+addLog.keypress = cell(1e4, 2);
 global counter;
-counter=0;
+counter = 0;
 global enableMemory
-enableMemory=false;
+enableMemory = false;
 global firstPress
-firstPress=false;
+firstPress = false;
 global feedbackFlag
-feedbackFlag=0;
+feedbackFlag = 0;
 global tone
 load(fullfile('assets', 'click.mat'))
-tone=y;
+tone = y;
 global lastKeyPress
-lastKeyPress=now;
+lastKeyPress = now;
 global keyWasReleased
-keyWasReleased=true;
+keyWasReleased = true;
 
 % Added by Marcela 10/04/2019
 global rclicksound
 global lclicksound
 global rFrequency
 global lFrequency
-[rclicksound,rFrequency]=audioread(fullfile('assets','RightClick.mp3'));
-[lclicksound,lFrequency]=audioread(fullfile('assets','LeftClick.mp3'));
+[rclicksound, rFrequency] = ...
+    audioread(fullfile('assets', 'RightClick.mp3'));
+[lclicksound, lFrequency] = ...
+    audioread(fullfile('assets', 'LeftClick.mp3'));
 global fastbeep
-[fastbeeps,fastbeepf]=audioread(fullfile('assets','FastBeep.mp3'));
-fastbeep=audioplayer(fastbeeps,fastbeepf);
+[fastbeeps, fastbeepf] = audioread(fullfile('assets', 'FastBeep.mp3'));
+fastbeep = audioplayer(fastbeeps, fastbeepf);
 
 % Added by Shuqi 01/19/2022
 global numAudioCountDown
 numAudioCountDown = -1;
 global isCalibration
-isCalibration = false; %default false (not a calibration trial)
+isCalibration = false; % default false (not a calibration trial)
 
 % Update handles structure
 guidata(hObject, handles);
@@ -117,7 +120,6 @@ guidata(hObject, handles);
 % set(handles.profilebrowse,'BackgroundColor',[1,1,1]);
 % % guidata(hObject, handles);
 
-
 % --- Outputs from this function are returned to the command line.
 function varargout = AdaptationGUI_OutputFcn(hObject, eventdata, handles)
 % varargout  cell array for returning output args (see VARARGOUT);
@@ -125,7 +127,7 @@ function varargout = AdaptationGUI_OutputFcn(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-%startup function
+% startup function
 % clc
 % global TrialNum
 %
@@ -133,8 +135,8 @@ function varargout = AdaptationGUI_OutputFcn(hObject, eventdata, handles)
 global SSspeed
 global SSstdev
 
-%set up variables for self selected pace before they are called anywhere
-%else
+% set up variables for self selected pace before they are called
+% anywhere else
 SSspeed = 1:20:800;
 SSstdev = 0;
 
@@ -149,6 +151,9 @@ SSstdev = 0;
 varargout{1} = handles.output;
 guidata(hObject, handles);
 
+% ============================================================
+% =================== Profile Selection ======================
+% ============================================================
 
 function SaveAs_textbox_Callback(hObject, ~, handles)
 % hObject    handle to SaveAs_textbox (see GCBO)
@@ -156,8 +161,7 @@ function SaveAs_textbox_Callback(hObject, ~, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hints: get(hObject,'String') returns contents of SaveAs_textbox as text
-%        str2double(get(hObject,'String')) returns contents of SaveAs_textbox as a double
-
+%        str2double(get(hObject,'String')) returns contents as a double
 
 % --- Executes during object creation, after setting all properties.
 function SaveAs_textbox_CreateFcn(hObject, eventdata, handles)
@@ -167,8 +171,9 @@ function SaveAs_textbox_CreateFcn(hObject, eventdata, handles)
 
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+if ispc && isequal(get(hObject, 'BackgroundColor'), ...
+        get(0, 'defaultUicontrolBackgroundColor'))
+    set(hObject, 'BackgroundColor', 'White');
 end
 
 %{
@@ -218,10 +223,14 @@ function SelectProfile_menu_CreateFcn(hObject, eventdata, handles)
 
 % Hint: popupmenu controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+if ispc && isequal(get(hObject, 'BackgroundColor'), ...
+        get(0, 'defaultUicontrolBackgroundColor'))
+    set(hObject, 'BackgroundColor', 'White');
 end
 
+% ============================================================
+% ================= Execute / Run Control ====================
+% ============================================================
 
 % --- Executes on button press in Execute_button.
 function Execute_button_Callback(hObject, eventdata, handles)
@@ -229,65 +238,66 @@ function Execute_button_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-%This callback runs when the Execute button is pressed
+% This callback runs when the Execute button is pressed
 global profilename
 global STOP
 global PAUSE
 global Functionname
 global allowedKeys
-%CARLY MARCELA
+% CARLY MARCELA
 global RFBClicker
 global LFBClicker
-%Shuqi
+% Shuqi
 global playClickerSound
 
-%default true (for perception studies). If running N-Back where click
-%should not follow sound, set to false.
+% default true (for perception studies). If running N-Back where click
+% should not follow sound, set to false.
 playClickerSound = true;
 
-%check which function to call when Execute is pressed.
-fnames = get(handles.popupmenu2,'string');
-selection = get(handles.popupmenu2,'Value');
+% check which function to call when Execute is pressed.
+fnames = get(handles.popupmenu2, 'String');
+selection = get(handles.popupmenu2, 'Value');
 Functionname = fnames{selection};
 % whos
-STOP=false;
-PAUSE=false;
+STOP = false;
+PAUSE = false;
 global feedbackFlag
-feedbackFlag=handles.feedbackBox.Value;
+feedbackFlag = handles.feedbackBox.Value;
 
-set(handles.Status_textbox,'String','Loading...');
-set(handles.Status_textbox,'BackgroundColor','Yellow');
+set(handles.Status_textbox, 'String', 'Loading...');
+set(handles.Status_textbox, 'BackgroundColor', 'Yellow');
 
 load(profilename)
 forceThreshold = 30;
-set(handles.Status_textbox,'String','Busy...');
-set(handles.Status_textbox,'BackgroundColor','Yellow');
+set(handles.Status_textbox, 'String', 'Busy...');
+set(handles.Status_textbox, 'BackgroundColor', 'Yellow');
 
 %Start capture Nexus & EMGWorks?
 % XServer=actxserver('WScript.Shell');
 % import java.awt.Robot;
 % import java.awt.event.*;
 % robot = Robot;
-startedEMG_flag=false; %turned on by Dulce 3/12/2020
-if get(handles.EMGWorks_checkbox,'Value')==1
-    startedEMG_flag=true;
+startedEMG_flag = false; % turned on by Dulce 3/12/2020
+if get(handles.EMGWorks_checkbox, 'Value') == 1
+    startedEMG_flag = true;
 
-    if get(handles.EMGWorks_checkbox,'Value')==1
-        button=questdlg('Please confirm that EMGworks is in trigger mode');  %added by DMMO 3/13/2020
-        if ~strcmp(button,'Yes')
-            return; %Abort starting of treadmill
+    if get(handles.EMGWorks_checkbox, 'Value') == 1
+        % added by DMMO 3/13/2020
+        button = questdlg( ...
+            'Please confirm that EMGworks is in trigger mode');
+        if ~strcmp(button, 'Yes')
+            return; % Abort starting of treadmill
         end
     else
         %           pause(3);
     end
 
-    disp(['Opening EMGWorks Port '  datestr(datetime('now'))])
+    disp(['Opening EMGWorks Port ' datestr(datetime('now'))])
     ss = serial('COM14');
     fopen(ss);
     pause(0.1);
     fclose(ss);
-    disp(['Done Opening EMGWorks Port '  datestr(datetime('now'))])
-
+    disp(['Done Opening EMGWorks Port ' datestr(datetime('now'))])
 
     %     %Do something
     %     startedEMG_flag=true;
@@ -296,10 +306,10 @@ if get(handles.EMGWorks_checkbox,'Value')==1
     %     XServer.SendKeys('^a'); %Start acquisition (it should already be in the acquisition phase of the workflow
     %     XServer.AppActivate('AdaptationGUI'); %This window
 end
-startedNexus_flag=false;
-if get(handles.Nexus_checkbox,'Value')==1
+startedNexus_flag = false;
+if get(handles.Nexus_checkbox, 'Value') == 1
 
-    startedNexus_flag=true;
+    startedNexus_flag = true;
 
     %**************wait for keyboard press before starting nexus and
     %everything else
@@ -335,46 +345,53 @@ if get(handles.Nexus_checkbox,'Value')==1
     %      %MOnitor in Nexus watched for pulse to toggle start/stop.
     %      %use orange wire out of serial port to pin 64 on AD board
 
-    disp(['Opening Vicon Port '  datestr(datetime('now'))])
+    disp(['Opening Vicon Port ' datestr(datetime('now'))])
     s = serial('COM1'); % vicon
     fopen(s);
     pause(0.1);
-    fclose(s);%this set of commands pulses the voltage high then low, signaling start/stop capture in nexus
-    disp(['Done Opening Vicon Port '  datestr(datetime('now'))])
+    fclose(s); % pulses the voltage high then low, toggling capture in Nexus
+    disp(['Done Opening Vicon Port ' datestr(datetime('now'))])
     %
-    if get(handles.waitForNexusChkBox,'Value')==1 && get(handles.EMGWorks_checkbox,'Value')==0
+    if get(handles.waitForNexusChkBox, 'Value') == 1 && ...
+            get(handles.EMGWorks_checkbox, 'Value') == 0
         %            if get(handles.waitForNexusChkBox,'Value')==1
-        button=questdlg('Please confirm that Nexus has started capture', 'Nexus confirm dialog');
-        if ~strcmp(button,'Yes')
-            return; %Abort starting of treadmill
+        button = questdlg( ...
+            'Please confirm that Nexus has started capture', ...
+            'Nexus confirm dialog');
+        if ~strcmp(button, 'Yes')
+            return; % Abort starting of treadmill
         end
-    elseif get(handles.waitForNexusChkBox,'Value')==1 && get(handles.EMGWorks_checkbox,'Value')==1 %added by DMMO 3/13/2020
-        button=questdlg('Please confirm that Nexus & EMGworks has started capture', 'Nexus confirm dialog');  %added by DMMO 3/13/2020
-        if ~strcmp(button,'Yes')  %added by DMMO 3/13/2020
-            return; %Abort starting of treadmill
+    elseif get(handles.waitForNexusChkBox, 'Value') == 1 && ...
+            get(handles.EMGWorks_checkbox, 'Value') == 1
+        % added by DMMO 3/13/2020
+        button = questdlg( ...
+            'Please confirm that Nexus & EMGworks has started capture', ...
+            'Nexus confirm dialog');
+        if ~strcmp(button, 'Yes') % added by DMMO 3/13/2020
+            return; % Abort starting of treadmill
         end
     else
         %           pause(3);
     end
 
-    %Deleting old plots:
-    ll=findobj(handles.profileaxes,'Type','Line');
+    % Deleting old plots:
+    ll = findobj(handles.profileaxes, 'Type', 'Line');
     delete(ll(1:end-2));
-    ll=findobj(handles.profileaxes,'Type','AnimatedLine');
+    ll = findobj(handles.profileaxes, 'Type', 'AnimatedLine');
     delete(ll);
 
-    %Give some time between Nexus start and treadmill start
-    pause(.1)
+    % Give some time between Nexus start and treadmill start
+    pause(0.1)
 
 end
 
-%switch between the available functions to call
-aux=regexp(profilename,'\');
-shortName=profilename(aux(end)+1:end-4);
+% switch between the available functions to call
+aux = regexp(profilename, '\');
+shortName = profilename(aux(end)+1:end-4);
 switch(selection)
 
-    case 1%control speed with steps
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_edit1(round(velL*1000), round(velR*1000), forceThreshold, shortName); %
+    case 1 % control speed with steps
 
     case 2
         mode=1; %Signed
@@ -401,14 +418,13 @@ switch(selection)
         end
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_selfSelect(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode,[],paramComputeFunc,paramCalibFunc); %
 
-    case 5%self selected speed
+    case 5 % self selected speed
         disp('running self selected speed');
         %be sure to have selected the right profile!!!!!
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame, ssrecord] = SelfSelectedSpeed(round(velL*1000),round(velR*1000),forceThreshold);
         ssrecord(1) = [];%delete useless zero at beginning
         disp(['The mean self selected seed is: ' num2str(nanmean(ssrecord))]);
         disp(['The stdev of speeds is: ' num2str(nanstd(ssrecord))]);
-
 
     case 6
         newline = sprintf('\n');
@@ -426,13 +442,12 @@ switch(selection)
         disp('mean selected speed: ');
         mean(listofss)./1000
 
-    case 7 % Perceptual trial ends when a click is recorded but the task length is determined by strides
-
         mode=1;
         allowedKeys={'numpad4','numpad6','leftarrow','rightarrow','pagedown','pageup'};
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_selfSelect_OneClick(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode); %
+    case 7 % Perceptual trial: ends on click; length set by strides
 
-    case 8 %providing audio feedback to the participants during overground walking
+    case 8 % audio feedback to participants during overground walking
         disp('Overground audio speed feedback');
         mode=1;
         audioFbBtn=questdlg('Should audio feedback on speed be provided?');  %added by DMMO 3/13/2020
@@ -457,12 +472,12 @@ switch(selection)
         % 06/20/24
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_PercAdap(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode); %
 
-
     case 10
         disp('AutomaticityAssessmentProtocol');
         mode=1;
         currTrial = inputdlg('What is the current_iteration (o=familiarization): ');
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = NirsAutomaticityAssessment(round(velL*1000), round(velR*1000), shortName,mode,[],[],[],str2num(currTrial{1}));
+
     case 11
         global numAudioCountDown %Added by Shuqi 1/19/2022, default [-1], only count down at TM start and end
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_edit1_AudioCountDown(round(velL*1000), round(velR*1000), forceThreshold, shortName, numAudioCountDown); %
@@ -522,7 +537,7 @@ switch(selection)
         end
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = OGNBackTask(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode,[],[],[],trialOptions{currTrial}); %offset the input by 2 so that the familiarization will be -1 and 0
 
-    case 14 %support open loop while logging events to NIRS & stimulate every 10 strides (specified inside the controller), optionally could have timed rest breaks in between, event timing will be auto generated by parsing the velL and velR.
+    case 14 % open-loop NIRS logging; Arduino stim every 10 strides
         disp('Short Split Train Nirs Protocol')
         global numAudioCountDown %Added by Shuqi 1/19/2022, default [-1], only count down at TM start and end
         global isCalibration %Added by SL 5/7/2024, default false, not a calibration trial
@@ -532,28 +547,28 @@ switch(selection)
             [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = NirsHreflexArduinoOpenLoopWithAudio(round(velL*1000), round(velR*1000), forceThreshold, shortName, numAudioCountDown, isCalibration, true, true);
         end
 
-    case 15 % Perceptual trial ends when a click is recorded but the task length is determined by time
         mode=1;
         allowedKeys={'numpad4','numpad6','leftarrow','rightarrow','pagedown','pageup'};
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = controlSpeedWithSteps_WeberPerceptionFaster(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode); %
-
-    case 16 % OG Hreflex with Audio feedback (fast, slow, good job)
         mode=1;
         audioFbBtn=questdlg('Should audio feedback on speed be provided?');  %added by DMMO 3/13/2020
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, commSendFrame] = HreflexOGWithAudio(round(velL*1000), round(velR*1000), forceThreshold, shortName,mode,[],[],[],strcmp(audioFbBtn,'Yes'));
+    case 15 % Perceptual trial: ends on click; length set by time
+
+    case 16 % OG Hreflex with audio feedback (fast, slow, good job)
 end
 
-pause(1.5); %Wait three seconds before stopping software collection
-%Stop capture Nexus & EMGWorks
+pause(1.5); % Wait three seconds before stopping software collection
+% Stop capture Nexus & EMGWorks
 if startedEMG_flag
     %     XServer.AppActivate('EMGworks 4.0.13 - Workflow Environment Pro'); %Get EMG in front
     %     XServer.SendKeys('^s'); %Stop acquisition
     %     XServer.AppActivate('AdaptationGUI'); %This window
-    disp(['Stopping EMG Port '  datestr(datetime('now'))])
+    disp(['Stopping EMG Port ' datestr(datetime('now'))])
     fopen(ss);
     pause(0.1);
     fclose(ss);
-    disp(['Done Stopping EMG Port '  datestr(datetime('now'))])
+    disp(['Done Stopping EMG Port ' datestr(datetime('now'))])
 end
 if startedNexus_flag
     %     XServer.AppActivate('Vicon Nexus 1.8.5');
@@ -568,17 +583,17 @@ if startedNexus_flag
     %       stopmsg=['<?xml version="1.0" encoding="UTF-8" standalone="no" ?><CaptureStop RESULT="SUCCESS"><Name VALUE="Trial' num2str(TrialNum) '"/><DatabasePath VALUE="' nexuspath '\"/><Delay VALUE="0"/><PacketID VALUE="' num2str(TrialNum*10) '"/></CaptureStop>']; %311
     %       step(myudp,int8(stopmsg));
     %
-    disp(['Closing Vicon Port '  datestr(datetime('now'))])
+    disp(['Closing Vicon Port ' datestr(datetime('now'))])
     fopen(s);
     pause(0.1);
     fclose(s);
-    disp(['Done Closing Vicon Port '  datestr(datetime('now'))])
+    disp(['Done Closing Vicon Port ' datestr(datetime('now'))])
 end
 
-set(handles.Status_textbox,'String','Ready');
-set(handles.Status_textbox,'BackgroundColor','Green');
+set(handles.Status_textbox, 'String', 'Ready');
+set(handles.Status_textbox, 'BackgroundColor', 'Green');
 
-%increment Trial # upon completion of Callback
+% increment Trial # upon completion of Callback
 % TrialNum = TrialNum+1;
 
 guidata(hObject, handles);
@@ -588,6 +603,7 @@ function Stop_button_Callback(hObject, eventdata, handles)
 % hObject    handle to Stop_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
 global STOP;
 STOP = true;
 
@@ -610,6 +626,9 @@ function listbox1_Callback(hObject, eventdata, handles)
 
 % Hints: contents = cellstr(get(hObject,'String')) returns listbox1 contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from listbox1
+% ============================================================
+% ================ Logging, Exit & Save ======================
+% ============================================================
 
 
 % --- Executes during object creation, after setting all properties.
@@ -617,22 +636,21 @@ function listbox1_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to listbox1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
-
 % Hint: listbox controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+if ispc && isequal(get(hObject, 'BackgroundColor'), ...
+        get(0, 'defaultUicontrolBackgroundColor'))
+    set(hObject, 'BackgroundColor', 'White');
 end
-
 
 % --- Executes on button press in Exit_button.
 function Exit_button_Callback(hObject, eventdata, handles)
 % hObject    handle to Exit_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
 close all;
 clear all;
-
 
 % --- Executes on button press in SaveAs_button.
 function SaveAs_button_Callback(hObject, eventdata, handles)
