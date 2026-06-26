@@ -28,6 +28,22 @@ addpath(genpath('C:\Users\Public\Documents\MATLAB\'));
 addpath(genpath('C:\Users\cntctsml\Documents\GitHub\labTools\'));
 ```
 
+#### What each path root provides
+
+| Path root | Provides | Example symbols |
+|---|---|---|
+| `C:\Program Files\Vicon\` | Vicon DataStream SDK (.NET) for real-time motion capture streaming, plus the `ViconNexus` class | `ViconDataStreamSDK.DotNET.Client`, `MyClient.GetFrame`, `MyClient.GetMarkerGlobalTranslation`, `MyClient.GetDeviceOutputValue` |
+| `C:\Users\Public\Documents\MATLAB\` | Bertec treadmill communication layer (UDP packet build/send/read) | `getPayload`, `sendTreadmillPacket`, `readTreadmillPacket`, `openTreadmillComm`, `getCurrentData` |
+| `C:\Users\cntctsml\Documents\GitHub\labTools\` | PittSMLlab `labTools` — used here for post-trial C3D export and marker-gap filling | `dataMotion.processAndFillMarkerGapsSession`, `dataMotion.exportSessionToC3D` |
+
+> **NOTE:** The treadmill comm functions (`getPayload`,
+> `sendTreadmillPacket`, etc.) live on the lab PC under
+> `C:\Users\Public\Documents\MATLAB\`, **not** in `labTools`. The actual
+> `labTools` runtime dependency is the `dataMotion.*` namespace, called
+> by the `studies/*` data-transfer scripts. See
+> [EXPERIMENT_SETUP.md](EXPERIMENT_SETUP.md) for the full editable-boundary
+> map.
+
 ### Hardware
 - Bertec split-belt instrumented treadmill
 - Vicon motion capture system
@@ -86,8 +102,9 @@ archive/                    Inactive / legacy files (old GUI snapshots,
 
 | Function | Purpose |
 |---|---|
-| `getPayload` | Format 64-byte treadmill control packet (external, labTools) |
-| `sendTreadmillPacket` | Transmit packet to Bertec treadmill |
+| `getPayload` | Format 64-byte treadmill control packet (external, treadmill comm layer on `C:\Users\Public\Documents\MATLAB\`) |
+| `sendTreadmillPacket` | Transmit packet to Bertec treadmill (external, same path root as `getPayload`) |
+| `dataMotion.exportSessionToC3D` | Export a session to C3D (external, labTools) |
 | `FindKinHS` / `FindKinTO` | Heel-strike / toe-off detection from kinematics |
 | `parseEventsFromSpeeds` | Classify stride phases from speed profile vectors |
 | `utils.transferData` | Recursively archive datlogs to server |
