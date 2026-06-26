@@ -48,11 +48,19 @@ end
 
 % --- Executes just before AdaptationGUI is made visible.
 function AdaptationGUI_OpeningFcn(hObject, eventdata, handles, varargin)
-% This function has no output args, see OutputFcn.
-% hObject    handle to figure
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-% varargin   command line arguments to AdaptationGUI (see VARARGIN)
+%ADAPTATIONGUI_OPENINGFCN Initialize GUI state before display.
+%
+%   Sets the global control flags, loads audio assets, and initializes
+%   the counters used by the perception-task keyboard logger.
+%
+% Inputs:
+%   hObject - handle to the figure
+%   eventdata - reserved for a future MATLAB version
+%   handles - structure with handles and user data (see GUIDATA)
+%   varargin - command-line arguments to AdaptationGUI (see VARARGIN)
+%
+% Toolbox Dependencies:
+%   None
 
 % Choose default command line output for AdaptationGUI
 handles.output = hObject;
@@ -122,10 +130,21 @@ guidata(hObject, handles);
 
 % --- Outputs from this function are returned to the command line.
 function varargout = AdaptationGUI_OutputFcn(hObject, eventdata, handles)
-% varargout  cell array for returning output args (see VARARGOUT);
-% hObject    handle to figure
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+%ADAPTATIONGUI_OUTPUTFCN Return GUI outputs and set self-paced defaults.
+%
+%   Initializes the self-selected pace variables before any controller
+%   can query them, then returns the default command-line output.
+%
+% Inputs:
+%   hObject - handle to the figure
+%   eventdata - reserved for a future MATLAB version
+%   handles - structure with handles and user data (see GUIDATA)
+%
+% Outputs:
+%   varargout - cell array whose first element is the figure handle
+%
+% Toolbox Dependencies:
+%   None
 
 % startup function
 % clc
@@ -156,19 +175,11 @@ guidata(hObject, handles);
 % ============================================================
 
 function SaveAs_textbox_Callback(hObject, ~, handles)
-% hObject    handle to SaveAs_textbox (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
 % Hints: get(hObject,'String') returns contents of SaveAs_textbox as text
 %        str2double(get(hObject,'String')) returns contents as a double
 
 % --- Executes during object creation, after setting all properties.
 function SaveAs_textbox_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to SaveAs_textbox (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject, 'BackgroundColor'), ...
@@ -217,10 +228,6 @@ function SelectProfile_menu_Callback(hObject, eventdata, handles)
 
 % --- Executes during object creation, after setting all properties.
 function SelectProfile_menu_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to SelectProfile_menu (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
 % Hint: popupmenu controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject, 'BackgroundColor'), ...
@@ -234,9 +241,19 @@ end
 
 % --- Executes on button press in Execute_button.
 function Execute_button_Callback(hObject, eventdata, handles)
-% hObject    handle to Execute_button (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+%EXECUTE_BUTTON_CALLBACK Load the selected profile and run a controller.
+%
+%   Reads the controller choice and profile, optionally starts Nexus and
+%   EMGWorks capture, dispatches to the chosen controller, then stops
+%   capture and restores the Ready status.
+%
+% Inputs:
+%   hObject - handle to Execute_button (see GCBO)
+%   eventdata - reserved for a future MATLAB version
+%   handles - structure with handles and user data (see GUIDATA)
+%
+% Toolbox Dependencies:
+%   Instrument Control Toolbox (serial)
 
 % This callback runs when the Execute button is pressed
 global profilename
@@ -600,9 +617,15 @@ guidata(hObject, handles);
 
 % --- Executes on button press in Stop_button.
 function Stop_button_Callback(hObject, eventdata, handles)
-% hObject    handle to Stop_button (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+%STOP_BUTTON_CALLBACK Signal all controllers to stop via the STOP flag.
+%
+% Inputs:
+%   hObject - handle to Stop_button (see GCBO)
+%   eventdata - reserved for a future MATLAB version
+%   handles - structure with handles and user data (see GUIDATA)
+%
+% Toolbox Dependencies:
+%   None
 
 global STOP;
 STOP = true;
@@ -645,18 +668,31 @@ end
 
 % --- Executes on button press in Exit_button.
 function Exit_button_Callback(hObject, eventdata, handles)
-% hObject    handle to Exit_button (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+%EXIT_BUTTON_CALLBACK Close all figures and clear the workspace.
+%
+% Inputs:
+%   hObject - handle to Exit_button (see GCBO)
+%   eventdata - reserved for a future MATLAB version
+%   handles - structure with handles and user data (see GUIDATA)
+%
+% Toolbox Dependencies:
+%   None
 
 close all;
 clear all;
 
 % --- Executes on button press in SaveAs_button.
 function SaveAs_button_Callback(hObject, eventdata, handles)
-% hObject    handle to SaveAs_button (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+%SAVEAS_BUTTON_CALLBACK Save the current log to the named MAT-file.
+%
+% Inputs:
+%   hObject - handle to SaveAs_button (see GCBO)
+%   eventdata - reserved for a future MATLAB version
+%   handles - structure with handles and user data (see GUIDATA)
+%
+% Toolbox Dependencies:
+%   None
+
 % global profilename
 % global RTOTime
 % global LTOTime
@@ -666,17 +702,17 @@ function SaveAs_button_Callback(hObject, eventdata, handles)
 % global commSendFrame
 global listbox
 
-savename = get(handles.SaveAs_textbox,'String');
+savename = get(handles.SaveAs_textbox, 'String');
 
-set(handles.Status_textbox,'String','Saving...');
-set(handles.Status_textbox,'BackgroundColor','Yellow');
+set(handles.Status_textbox, 'String', 'Saving...');
+set(handles.Status_textbox, 'BackgroundColor', 'Yellow');
 
 if isempty(savename) == 1
     savename = 'HEY_YOU_FORGOT_TO_NAME_THIS_FIX_IT';
 else
 end
 % keyboard
-save(savename,'listbox');
+save(savename, 'listbox');
 % save savename;
 
 set(handles.Status_textbox,'String','Ready');
@@ -718,160 +754,148 @@ guidata(hObject, handles);
 
 % --- Executes on button press in HideLog_checkbox.
 function HideLog_checkbox_Callback(hObject, eventdata, handles)
-% hObject    handle to HideLog_checkbox (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+%HIDELOG_CHECKBOX_CALLBACK Show or hide the event-log listbox.
+%
+% Inputs:
+%   hObject - handle to HideLog_checkbox (see GCBO)
+%   eventdata - reserved for a future MATLAB version
+%   handles - structure with handles and user data (see GUIDATA)
+%
+% Toolbox Dependencies:
+%   None
 
-% Hint: get(hObject,'Value') returns toggle state of HideLog_checkbox
-
-LogView = get(hObject,'Value');
+LogView = get(hObject, 'Value');
 
 if LogView == 0
-    set(handles.listbox1,'Visible','on');
+    set(handles.listbox1, 'Visible', 'On');
 elseif LogView == 1
-    set(handles.listbox1,'Visible','off');
+    set(handles.listbox1, 'Visible', 'Off');
 end
 
 
 
 guidata(hObject, handles);
+
+% ============================================================
+% =============== Device & Option Checkboxes =================
+% ============================================================
 
 % --- Executes on button press in Nexus_checkbox.
 function Nexus_checkbox_Callback(hObject, eventdata, handles)
-% hObject    handle to Nexus_checkbox (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
 % Hint: get(hObject,'Value') returns toggle state of Nexus_checkbox
-
 
 % --- Executes on button press in EMGWorks_checkbox.
 function EMGWorks_checkbox_Callback(hObject, eventdata, handles)
-% hObject    handle to EMGWorks_checkbox (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
 % Hint: get(hObject,'Value') returns toggle state of EMGWorks_checkbox
-
 
 % --- Executes when selecting the audio_feedback controller.
 function AudioFeedback_checkbox_Callback(hObject, eventdata, handles)
-% hObject    handle to provide audio feedback in over ground walking (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of Audiofeedback (yes or
-% no)
-
+% Hint: get(hObject,'Value') returns toggle state of Audiofeedback
 
 % --- Executes on button press in StoptreadmillSTOP_checkbox.
 function StoptreadmillSTOP_checkbox_Callback(hObject, eventdata, handles)
-% hObject    handle to StoptreadmillSTOP_checkbox (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of StoptreadmillSTOP_checkbox
-
+% Hint: get(hObject,'Value') returns toggle state of the checkbox
 
 % --- Executes on button press in StoptreadmillEND_checkbox.
 function StoptreadmillEND_checkbox_Callback(hObject, eventdata, handles)
-% hObject    handle to StoptreadmillEND_checkbox (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+% Hint: get(hObject,'Value') returns toggle state of the checkbox
 
-% Hint: get(hObject,'Value') returns toggle state of StoptreadmillEND_checkbox
 
+
+% ============================================================
+% =========== Controller Menu & Profile Browse ===============
+% ============================================================
 
 % --- Executes on selection change in popupmenu2.
 function popupmenu2_Callback(hObject, eventdata, handles)
-% hObject    handle to popupmenu2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
 % global Functionname
 
-%check which function to call when Execute is pressed.
+% check which function to call when Execute is pressed.
 % Functionname = get(hObject,'Value');
 
 guidata(hObject, handles);
-% Hints: contents = cellstr(get(hObject,'String')) returns popupmenu2 contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from popupmenu2
-
+% Hints: contents = cellstr(get(hObject,'String')) returns popupmenu2
+%        contents{get(hObject,'Value')} returns selected item
 
 % --- Executes during object creation, after setting all properties.
 function popupmenu2_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to popupmenu2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
 % Hint: popupmenu controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+if ispc && isequal(get(hObject, 'BackgroundColor'), ...
+        get(0, 'defaultUicontrolBackgroundColor'))
+    set(hObject, 'BackgroundColor', 'White');
 end
-
 
 % --- Executes on button press in profilebrowse.
 function profilebrowse_Callback(hObject, eventdata, handles)
-% hObject    handle to profilebrowse (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+%PROFILEBROWSE_CALLBACK Browse for a profile and plot its speed curves.
+%
+%   Lets the user pick a speed-profile MAT-file, plots the left/right
+%   belt velocities, populates the step-count boxes, and enables
+%   Execute.
+%
+% Inputs:
+%   hObject - handle to profilebrowse (see GCBO)
+%   eventdata - reserved for a future MATLAB version
+%   handles - structure with handles and user data (see GUIDATA)
+%
+% Toolbox Dependencies:
+%   None
+
 global profilename
 
 % global flasher
 % stop(flasher);
 % delete(flasher);
 
-set(handles.Status_textbox,'String','Plotting');
-set(handles.Status_textbox,'BackgroundColor','Yellow');
+set(handles.Status_textbox, 'String', 'Plotting');
+set(handles.Status_textbox, 'BackgroundColor', 'Yellow');
 pause(0.25);
 
-[d,n,e]=fileparts(which(mfilename));
-[ff,dd,~] = uigetfile([d '\profiles\']);
-profilename=[dd ff];
+[d, n, e] = fileparts(which(mfilename()));
+[ff, dd, ~] = uigetfile([d '\profiles\']);
+profilename = [dd ff];
 try
     load(profilename);
 
     t = [0:length(velL)-1];
 
-    set(handles.profileaxes,'NextPlot','replace')
-    plot(handles.profileaxes,t,velL,'b',t,velR,'r','LineWidth',2);
+    set(handles.profileaxes, 'NextPlot', 'replace')
+    plot(handles.profileaxes, t, velL, 'b', t, velR, 'r', ...
+        'LineWidth', 2);
     if isrow(velL) && isrow(velR)
-        ylim([min([velL velR])-1,max([velL velR])+1]);
+        ylim([min([velL velR])-1, max([velL velR])+1]);
     else
-        ylim([min([velL;velR])-1,max([velL;velR])+1]);
+        ylim([min([velL; velR])-1, max([velL; velR])+1]);
     end
     % ylim([0 2.0]);
 
     xlabel('Stride Count');
     ylabel('Speed (m/s)');
-    legend('Left Foot','Right Foot','AutoUpdate','off');
-    set(handles.profileaxes,'NextPlot','add')
+    legend('Left Foot', 'Right Foot', 'AutoUpdate', 'off');
+    set(handles.profileaxes, 'NextPlot', 'add')
 
-    set(handles.Status_textbox,'String','Ready');
-    set(handles.Status_textbox,'BackgroundColor','Green');
-    set(handles.totalLstepsBox,'String',num2str(length(velL)));
-    set(handles.totalRstepsBox,'String',num2str(length(velL)));
+    set(handles.Status_textbox, 'String', 'Ready');
+    set(handles.Status_textbox, 'BackgroundColor', 'Green');
+    set(handles.totalLstepsBox, 'String', num2str(length(velL)));
+    set(handles.totalRstepsBox, 'String', num2str(length(velL)));
     clear velL velR;
 
-    set(handles.Execute_button,'Enable','on');
+    set(handles.Execute_button, 'Enable', 'On');
 catch
 
 end
 
 guidata(hObject, handles);
+
 % --- Executes on button press in Incline.
 function Incline_Callback(hObject, eventdata, handles)
-% hObject    handle to Incline (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 % global InclineAngle
 
 % uiwait(msgbox(['Warning! You are about to change the written incline angle of the treadmill!' sprintf('\n') sprintf('\n') 'This should not be done unless the treadmill has already been moved to the new angle and locked.' sprintf('\n') 'Failure to comply will result in serious damage!'],'Wait!','warn'));
 % InclineAngle = str2double(inputdlg('Please enter the new angle'));
 %
 % set(handles.Angle,'String',num2str(InclineAngle));
-
 
 % keyboard
 guidata(hObject, handles);
@@ -886,48 +910,50 @@ global listbox
 listbox = {''};
 set(handles.listbox1,'String',listbox);
 guidata(hObject, handles);
+% ============================================================
+% ============= Perturbation / Manual Speed ==================
+% ============================================================
 
 % --- Executes on button press in perturbspeed.
 function perturbspeed_Callback(hObject, eventdata, handles)
-% hObject    handle to perturbspeed (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+%PERTURBSPEED_CALLBACK Arm or disarm a manual speed perturbation.
+%
+%   When armed, reads the manual speed from the textbox and highlights
+%   the button; when disarmed, resets the manual speed to zero.
+%
+% Inputs:
+%   hObject - handle to perturbspeed (see GCBO)
+%   eventdata - reserved for a future MATLAB version
+%   handles - structure with handles and user data (see GUIDATA)
+%
+% Toolbox Dependencies:
+%   None
 
-% Hint: get(hObject,'Value') returns toggle state of perturbspeed
 global manspeed
 
-Pert = get(hObject,'Value');
+Pert = get(hObject, 'Value');
 
 if Pert == 1
-    manspeed = str2double(get(handles.manspeedbox,'String'));
-    set(hObject,'BackgroundColor','red');
+    manspeed = str2double(get(handles.manspeedbox, 'String'));
+    set(hObject, 'BackgroundColor', 'Red');
 else
     manspeed = 0;
-    set(hObject,'BackgroundColor',[0.94 0.94 0.94]);
+    set(hObject, 'BackgroundColor', [0.94 0.94 0.94]);
 end
-
 
 guidata(hObject, handles);
 
 function manspeedbox_Callback(hObject, eventdata, handles)
-% hObject    handle to manspeedbox (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
 % Hints: get(hObject,'String') returns contents of manspeedbox as text
-%        str2double(get(hObject,'String')) returns contents of manspeedbox as a double
-
+%        str2double(get(hObject,'String')) returns contents as a double
 
 % --- Executes during object creation, after setting all properties.
 function manspeedbox_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to manspeedbox (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+if ispc && isequal(get(hObject, 'BackgroundColor'), ...
+        get(0, 'defaultUicontrolBackgroundColor'))
+    set(hObject, 'BackgroundColor', 'White');
 end
 
 % --- Executes on button press in waitForNexusChkBox.
@@ -937,8 +963,12 @@ function waitForNexusChkBox_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of waitForNexusChkBox
+% ============================================================
+% ================ Keyboard & Mouse Input ====================
+% ============================================================
 
-% --- Executes on key press with focus on figure1 and none of its controls.
+% --- Executes on key press with focus on figure1 and none of its
+% --- controls.
 function figure1_KeyPressFcn(hObject, eventdata, handles)
 % hObject    handle to figure1 (see GCBO)
 % eventdata  structure with the following fields (see FIGURE)
@@ -948,6 +978,20 @@ function figure1_KeyPressFcn(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
+%FIGURE1_WINDOWKEYPRESSFCN Log perception-task keypresses and cue audio.
+%
+%   On an allowed key (when memory logging is enabled and the previous
+%   key was released), records the choice and time, updates the running
+%   memory value, and plays the corresponding left/right click sound.
+%
+% Inputs:
+%   hObject - handle to figure1 (see GCBO)
+%   eventdata - key event data; uses the Key field
+%   handles - structure with handles and user data (see GUIDATA)
+%
+% Toolbox Dependencies:
+%   None
+
 global keyWasReleased
 global enableMemory
 global firstPress
@@ -957,27 +1001,26 @@ global tone
 global lastKeyPress
 global allowedKeys
 
-%CARLY MARCELA
+% CARLY MARCELA
 global RFBClicker
 global LFBClicker
 
-%Added by Marcela 10/04/2019
+% Added by Marcela 10/04/2019
 global rclicksound
 global lclicksound
 global rFrequency
 global lFrequency
 global fastbeep
 
-%Added by Shuqi 8/16/2022, skip clicker sound if doing N-back clicking.
+% Added by Shuqi 8/16/2022, skip clicker sound if doing N-back clicking.
 global playClickerSound
 
-%Get key:
+% Get key:
 keypress = eventdata.Key;
-isAllowed=any(strcmp(keypress,allowedKeys));
+isAllowed = any(strcmp(keypress, allowedKeys));
 % disp('Detect click')
 if enableMemory && isAllowed && keyWasReleased
     %     disp('Detect click and if yes')
-    %Add to counter & record keypress in log
     counter=counter+1;
     addLog.keypress{counter,1}=keypress;
     addLog.keypress{counter,2}=now;
