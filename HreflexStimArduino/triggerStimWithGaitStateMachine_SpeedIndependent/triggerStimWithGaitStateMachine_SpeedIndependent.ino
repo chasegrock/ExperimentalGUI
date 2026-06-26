@@ -1,40 +1,45 @@
-// Code to stimulate the tibial nerve of both legs for the Spinal Adaptation
-// study to measure H-reflexes during split-belt adaptation. Updated to
-// accept Serial input from MATLAB to indicate whether to stimulate on the
-// current stride. Includes the gait event detection state machine and
-// removes speed dependence by storing a continuously updated single stance
-// duration estimate. A median filter is applied to the analog force signal
-// to reduce noise.
-// date (started): 26 Mar. 2024
-// author(s): SL, NWB
+// triggerStimWithGaitStateMachine_SpeedIndependent.ino
+// Stimulate the tibial nerve bilaterally for H-reflex measurement
+// during split-belt treadmill adaptation.
+//
+// Accepts serial commands from MATLAB to gate per-stride stimulation.
+// Runs an on-board gait event detection state machine so that stim
+// timing is independent of MATLAB loop rate. Uses an exponentially
+// updated single-stance duration estimate to target 50% of single
+// stance. A median filter reduces noise on the analog force signal.
+//
+// Date started: 26 Mar. 2024
+// Authors: SL, NWB
 
 // -------------------------- Pin Definitions --------------------------
-const int pinInFzL = A0;     // left force plate sensor input
-const int pinOutStimL = 9;   // left stimulation output
-const int pinOutViconL = 12; // left Vicon output
-const int pinInFzR = A1;     // right force plate sensor input
-const int pinOutStimR = 8;   // right stimulation output
-const int pinOutViconR = 11; // right Vicon output
+const int pinInFzL  = A0; // left force plate sensor input
+const int pinOutStimL  = 9; // left stimulation output
+const int pinOutViconL = 12; // left Vicon sync output
+const int pinInFzR  = A1; // right force plate sensor input
+const int pinOutStimR  = 8; // right stimulation output
+const int pinOutViconR = 11; // right Vicon sync output
 
-// -------------------------- Constants & Parameters --------------------------
-// z-axis force threshold in DAQ bits (estimated by observing the z-axis
-// force plate voltages during walking and converting to bits based on 10-bit
-// ADC; we also verified that the Arduino-read bits are comparable to what we
-// expect given the Vicon-read voltages, although we found a small bias)
-// TODO: it may be necessary to increase to account for left FP noise and
-// higher baud rate in Arduino than in MATLAB (more susceptible to false gait
-// event detection))
-const int threshFzUp = 30;              // force threshold (bits) for detecting stance (upper)
-const int threshFzDown = 2;             // force threshold for detecting stance (lower)
-const int durStimPulse = 20;            // stimulation pulse duration (ms)
-const unsigned long timeDebounce = 100; // de-bouncing time constant (ms)
-const float percentSS2Stim = 0.50;      // 50% of single stance phase target
-const float alpha = 0.7;                // smoothing factor (0 < alpha <= 1)
-const float alphaLPF = 0.02;            // low-pass filter smoothing (0 < alpha << 1)
-const unsigned long intervalLog = 5;    // ms between CSV logs
+// -------------------------- Constants & Parameters ------------------
+// z-axis force threshold in DAQ bits (estimated by observing the
+// z-axis force plate voltages during walking and converting to bits
+// based on 10-bit ADC; we also verified that the Arduino-read bits
+// are comparable to what we expect given the Vicon-read voltages,
+// although we found a small bias)
+// TODO: it may be necessary to increase to account for left FP noise
+// and higher baud rate in Arduino than in MATLAB (more susceptible to
+// false gait event detection)
+const int threshFzUp   = 30;  // force threshold (bits), stance upper
+const int threshFzDown = 2;   // force threshold (bits), stance lower
+const int durStimPulse = 20;  // stimulation pulse duration (ms)
+// de-bouncing time constant (ms)
+const unsigned long timeDebounce   = 100;
+const float percentSS2Stim = 0.5;  // 50% of single stance phase
+const float alpha    = 0.7;  // smoothing factor (0 < alpha <= 1)
+const float alphaLPF = 0.02; // low-pass filter smoothing (0 < alpha << 1)
+const unsigned long intervalLog = 5; // ms between CSV logs
 unsigned long timeLastLog = 0;
 
-// -------------------------- Global Variables --------------------------
+// -------------------------- Global Variables ------------------------
 // gait event state variables
 bool isCurrStanceL = false; // is current step left foot stance?
 bool isCurrStanceR = false; // is current step right foot stance?
@@ -50,28 +55,32 @@ float filtL = 0;
 float filtR = 0;
 
 // timing variables (in ms)
-unsigned long timeLHS = 0;           // time of most recent LHS events
-unsigned long timeRHS = 0;           // time of most recent RHS events
-unsigned long timeLTO = 0;           // time of most recent LTO events
-unsigned long timeRTO = 0;           // time of most recent RTO events
-unsigned long timeSinceLTO = 0;      // time since LTO event
-unsigned long timeSinceRTO = 0;      // time since RTO event
-unsigned long timeStanceChangeL = 0; // time when isCurrentStance changes
+unsigned long timeLHS = 0;  // time of most recent LHS events
+unsigned long timeRHS = 0;  // time of most recent RHS events
+unsigned long timeLTO = 0;  // time of most recent LTO events
+unsigned long timeRTO = 0;  // time of most recent RTO events
+unsigned long timeSinceLTO = 0; // time since LTO event
+unsigned long timeSinceRTO = 0; // time since RTO event
+// time when isCurrStance changes
+unsigned long timeStanceChangeL = 0;
 unsigned long timeStanceChangeR = 0;
-unsigned long timeSinceStanceChangeL = 0; // time elapsed since isCurrentStance changed
+// time elapsed since isCurrStance changed
+unsigned long timeSinceStanceChangeL = 0;
 unsigned long timeSinceStanceChangeR = 0;
-unsigned long timeTargetStimL = 198; // initial RTO delay estimate for left stimulation
-unsigned long timeTargetStimR = 198; // initial LTO delay estimate for right stimulation
+// initial delay estimates for stimulation (ms)
+unsigned long timeTargetStimL = 198;
+unsigned long timeTargetStimR = 198;
 
 // single stance duration estimates & measured durations
-// NOTE: initial estimate set based on normative data from Liu et al. 2014
-// (Gait & Posture), which includes mean "normal" velocity of 1.17+/-0.14 m/s
-// (N=95, 34.9+/-11.8 years), mean gait cycle duration of 1062.02 ms, and
-// mean percentage of single stance of 37.34% (Table 4) giving 396.6 ms in
-// single stance, 426.0 ms (slow speed) or 362.9 ms (fast). These values are
-// comparable to those of Hebenstreit et al. 2015 (Human Movement Science).
-// Using a better initial estimate may improve the stimulation timing
-// precision of the first few strides within a trial.
+// NOTE: initial estimate set based on normative data from Liu et al.
+// 2014 (Gait & Posture), which includes mean "normal" velocity of
+// 1.17+/-0.14 m/s (N=95, 34.9+/-11.8 years), mean gait cycle
+// duration of 1062.02 ms, and mean percentage of single stance of
+// 37.34% (Table 4) giving 396.6 ms in single stance, 426.0 ms (slow
+// speed) or 362.9 ms (fast). These values are comparable to those of
+// Hebenstreit et al. 2015 (Human Movement Science). Using a better
+// initial estimate may improve stimulation timing precision of the
+// first few strides within a trial.
 float estSSL = 396.6; // estimated single stance duration (ms)
 float estSSR = 396.6;
 unsigned long durSSL = 397; // measured single stance duration (ms)
@@ -90,17 +99,17 @@ unsigned long timeStimStartL = 0; // time when left stimulation started
 unsigned long timeStimStartR = 0; // time when right stimulation started
 
 // gait phase & step counts
-// gait phase: 0 = initial double support, 1 = single L support, 2 = single R
-// support, 3 = double support from single L support, 4 = double support from
-// single R support
-int phase = 0;
+// gait phase: 0 = initial double support, 1 = single L support,
+// 2 = single R support, 3 = double support from single L support,
+// 4 = double support from single R support
+int phase     = 0;
 int numStepsL = 0; // left step counter
 int numStepsR = 0; // right step counter
 
 // serial communication variable
 int command = 0;
 
-// -------------------------- Setup --------------------------
+// -------------------------- Setup -----------------------------------
 void setup()
 {
   Serial.begin(115200);
@@ -111,7 +120,7 @@ void setup()
   pinMode(pinOutViconR, OUTPUT);
 }
 
-// -------------------------- Main Loop --------------------------
+// -------------------------- Main Loop -------------------------------
 void loop()
 {
   processSerialCommands();
@@ -124,7 +133,9 @@ void loop()
   // logForceCSV();
 }
 
-// -------------------------- Serial Communication --------------------------
+// -------------------------- Serial Communication --------------------
+// Read one byte from MATLAB and dispatch: 0 = start state machine,
+// 1 = gate left stim, 2 = gate right stim, 3 = stop state machine.
 void processSerialCommands()
 {
   // check for input from MATLAB
@@ -157,21 +168,23 @@ void processSerialCommands()
   }
 }
 
+// -------------------------- State Machine Reset ---------------------
+// Clear all stance and phase state; set shouldRunSM to begin a trial.
 void resetStateMachine()
 {
   isCurrStanceL = false;
   isCurrStanceR = false;
   isPrevStanceL = false;
   isPrevStanceR = false;
-  phase = 0;
+  phase     = 0;
   numStepsL = 0;
   numStepsR = 0;
   shouldRunSM = true;
 }
 
-// -------------------------- Median Filter Function --------------------------
-// This function takes 'numSamples' analog readings from the specified pin,
-// sorts them, and returns the median value.
+// -------------------------- Median Filter ---------------------------
+// Take numSamples analog readings from pin, sort them, and return the
+// median. numSamples is clamped to [1, 9] to prevent stack overflow.
 int medianFilter(int pin, int numSamples = 9)
 {
   int samples[9];                           // use an odd number for a simple median
@@ -188,7 +201,7 @@ int medianFilter(int pin, int numSamples = 9)
     {
       if (samples[j] < samples[i])
       {
-        int temp = samples[i];
+        int temp   = samples[i];
         samples[i] = samples[j];
         samples[j] = temp;
       }
@@ -197,7 +210,10 @@ int medianFilter(int pin, int numSamples = 9)
   return samples[numSamples / 2]; // return the median value
 }
 
-// -------------------------- Gait Event State Machine --------------------------
+// -------------------------- Gait Event State Machine ----------------
+// Update heel-strike and toe-off event flags from analog force inputs,
+// then advance the gait phase. Estimates single-stance duration via
+// exponential smoothing for use by triggerStimulation().
 void updateGaitEventStateMachine()
 {
   // implement gait event state machine to update gait phase
@@ -207,7 +223,7 @@ void updateGaitEventStateMachine()
   // read z-axis force plate sensor values to detect new stance phase
   // TODO: consider updating a force data buffer rather than current approach
   // use median filter for force readings to reduce noise
-  int leftForce = analogRead(pinInFzL);
+  int leftForce  = analogRead(pinInFzL);
   int rightForce = analogRead(pinInFzR);
 
   // IIR low-pass filter
@@ -238,13 +254,17 @@ void updateGaitEventStateMachine()
   timeSinceStanceChangeR = millis() - timeStanceChangeR;
 
   // update events if stance state changes and debounce time has passed
-  if (isCurrStanceL != isPrevStanceL && timeSinceStanceChangeL > timeDebounce && timeSinceStanceChangeR > timeDebounce)
+  if (isCurrStanceL != isPrevStanceL
+      && timeSinceStanceChangeL > timeDebounce
+      && timeSinceStanceChangeR > timeDebounce)
   {
     timeStanceChangeL = millis();
     LHS = isCurrStanceL && !isPrevStanceL; // left heel strike detection
     LTO = !isCurrStanceL && isPrevStanceL; // left toe off detection
   }
-  if (isCurrStanceR != isPrevStanceR && timeSinceStanceChangeR > timeDebounce && timeSinceStanceChangeL > timeDebounce)
+  if (isCurrStanceR != isPrevStanceR
+      && timeSinceStanceChangeR > timeDebounce
+      && timeSinceStanceChangeL > timeDebounce)
   {
     timeStanceChangeR = millis();
     RHS = isCurrStanceR && !isPrevStanceR; // right heel strike detection
@@ -331,7 +351,9 @@ void updateGaitEventStateMachine()
   }
 }
 
-// -------------------------- Stimulation Triggering --------------------------
+// -------------------------- Stimulation Triggering ------------------
+// Fire the stim output when the estimated 50%-single-stance target
+// delay has elapsed since the contralateral toe-off event.
 void triggerStimulation()
 {
   // TODO: move definition up to top
@@ -351,7 +373,7 @@ void triggerStimulation()
       digitalWrite(pinOutStimL, HIGH);
       digitalWrite(pinOutViconL, HIGH);
       timeStimStartL = millis(); // TODO: use 'timeNow' if temporally precise enough
-      isStimmingL = true;
+      isStimmingL  = true;
       // canStimL = false;
       shouldStimL = false; // reset trigger for next cycle
     }
@@ -371,14 +393,15 @@ void triggerStimulation()
       digitalWrite(pinOutStimR, HIGH);
       digitalWrite(pinOutViconR, HIGH);
       timeStimStartR = millis();
-      isStimmingR = true;
+      isStimmingR  = true;
       // canStimR = false;
       shouldStimR = false; // reset trigger for next cycle
     }
   }
 }
 
-// -------------------------- Stimulation Timeout --------------------------
+// -------------------------- Stimulation Timeout ---------------------
+// Turn off stim outputs once durStimPulse ms have elapsed.
 void handleStimulationTimeout()
 {
   unsigned long timeNow = millis();
@@ -400,7 +423,10 @@ void handleStimulationTimeout()
   }
 }
 
-// --- CSV logging of raw & filtered forces --------------
+// --- CSV Force Logging ----------------------------------------------
+// Log raw left and right force readings as CSV over Serial at
+// intervalLog ms intervals. Disabled in production (call site is
+// commented out in loop()).
 void logForceData(int leftForce, int rightForce)
 {
   unsigned long currentTime = millis();
