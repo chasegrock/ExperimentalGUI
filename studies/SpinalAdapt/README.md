@@ -76,6 +76,38 @@ confirm:
 | `runWalkingCalibrations.m` | Pre-experiment stimulus calibration |
 | `transferData_SpinalAdaptBouts.m` | Data transfer and archival |
 
+## H-Reflex Calibration Processing
+
+After each walking dynamic H-reflex calibration trial, a Vicon Nexus
+2.12 processing pipeline automatically runs
+`labTools/fun/misc/generateHreflexRecruitmentCurves.m`. This script
+is **not** called by ExperimentalGUI — it is triggered by Nexus after
+each calibration C3D is saved.
+
+The script accesses the current open trial via `ViconNexus()` (Vicon
+Nexus MATLAB SDK), loads analog EMG and force-plate data via BTK
+(`btkReadAcquisition`, `btkGetAnalogs`), and calls the `+Hreflex`
+namespace in labTools to produce recruitment curves. Output figures
+are saved to a `HreflexCalFigs/` subfolder of the trial directory.
+The experimenter inspects the curves to select the stimulation
+current for the walking adaptation trials (target: ≈ 10–20% of
+maximum M-wave).
+
+**`+Hreflex` functions called by this pipeline** (all in
+`labTools/fun/+Hreflex/`):
+
+| Function | Role |
+|---|---|
+| `extractStimArtifactIndsFromTrigger` | Locate pulse times from trigger channel |
+| `plotStimArtifactPeaks` | Plot detected peaks for QC |
+| `extractSnippets` | Extract per-pulse EMG windows |
+| `plotSnippets` | Plot per-pulse snippets for QC |
+| `extractBackgroundEMG` | Compute pre-stimulus background level |
+| `computeAmplitudes` | Peak-to-peak M- and H-wave amplitudes |
+| `fitCal` | Fit recruitment curves to amplitude vs. current |
+| `plotNoiseHistogram` | Plot background EMG noise distribution |
+| `plotCal` | Plot fitted recruitment curves |
+
 ## Hardware
 
 H-reflex stimulation requires an Arduino Uno running the firmware in
