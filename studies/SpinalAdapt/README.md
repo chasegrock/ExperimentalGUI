@@ -67,14 +67,24 @@ confirm:
   with a short dummy profile at low treadmill speed and confirm every
   intended stride fires once near mid-single-stance.
 
+## Study History
+
+| Archive folder | Description |
+|---|---|
+| `History-PilotStudy1/` | Original pilot — simpler tied/split structure; no fNIRS bout design. Scripts: `SpinalAdaptProtocol.m`, `GenerateProfileSpinalStudy.m`. |
+| `History-PilotStudy2/` | Bout-based protocol — participants SABH01 through at least SABH16+ (July 2023–2025). Speed ratio changed from 0.5 to 0.7 after SABH16 (July 2024); ramp-to-split option added then later removed. Scripts reformatted to CLAUDE.md style (June 2026). |
+
+The active files in this folder are templates for the next protocol version.
+New protocol conditions and ramp logic have not yet been designed.
+
 ## Key Scripts
 
-| Script | Purpose |
-|---|---|
-| `RunProtocol_SpinalAdaptBouts.m` | Main protocol runner |
-| `generateProfiles_SpinalAdaptBouts.m` | Speed profile generator |
-| `runWalkingCalibrations.m` | Pre-experiment stimulus calibration |
-| `transferData_SpinalAdaptBouts.m` | Data transfer and archival |
+| Script | Status | Purpose |
+|---|---|---|
+| `RunProtocol_SpinalAdaptBouts.m` | Template | Main protocol runner |
+| `generateProfiles_SpinalAdaptBouts.m` | Template | Speed and stim profile generator |
+| `runWalkingCalibrations.m` | Active | H-reflex walking calibration helper |
+| `transferData_SpinalAdaptBouts.m` | Active | Data transfer and archival |
 
 ## H-Reflex Calibration Processing
 

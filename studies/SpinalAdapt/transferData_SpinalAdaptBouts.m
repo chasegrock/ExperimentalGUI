@@ -1,69 +1,82 @@
-function transferData_SpinalAdapt(participantID,threshTime)
-%TRANSFERDATA_SPINALADAPT Transfer PC1 data for the Spinal Adaptation study
-%   This function accepts the participant ID and recursively transfers all
-% data to the server (including creating non-existant folders if necessary)
-% and creates folders that will be needed for future analysis.
+function transferData_SpinalAdaptBouts(participantID, threshTime)
+%TRANSFERDATA_SPINALADAPTBOUTS Transfer PC1 data for the SpinalAdapt study.
 %
-% input(s):
-%   participantID: string or character array of the ID (e.g., 'SABH##')
+%   Recursively copies Vicon, NIRS, speed profile, and data-log files to
+%   the server (W:\SpinalAdaptStudy\), creating non-existent destination
+%   folders as needed, then creates analysis-ready subdirectories for
+%   future processing.
+%
+% Inputs:
+%   participantID - char or string; participant ID (e.g., 'SABH08',
+%                   'SAS01V01')
+%   threshTime    - datetime; only files newer than this timestamp are
+%                   transferred (typically set at session start)
+%
+% Outputs:
+%   None
+%
+% Toolbox Dependencies:
+%   None (calls utils.transferDataSess from labTools)
+%
+% See also RUNPROTOCOL_SPINALADAPTBOUTS, UTILS.TRANSFERDATASESS.
 
 % TODO: update function to open a GUI for user input if no inputs provided
-narginchk(2,2);         % verify correct number of input arguments
+narginchk(2, 2);        % verify correct number of input arguments
 
 % TODO: add error checks and set default value for 'threshTime'
 
-% define data paths based on input parameters
+%% Define Data Paths
 dirExpGUI = 'C:\Users\Public\Documents\MATLAB\ExperimentalGUI';
-dirProfiles = fullfile(dirExpGUI,'profiles','SpinalAdaptNirsStudy', ...
+dirProfiles = fullfile(dirExpGUI, 'profiles', 'SpinalAdaptNirsStudy', ...
     participantID);
 dirNIRS = 'C:\Users\cntctsml\Documents\Oxysoft Data\SpinalAdaptStudy';
 dirData = fullfile(['C:\Users\Public\Documents\Vicon Training\' ...
-    'SpinalAdaptStudy'],participantID,'New Session');
+    'SpinalAdaptStudy'], participantID, 'New Session');
 dirSrvrSpinalAdapt = 'W:\SpinalAdaptStudy';
-dirSrvrData = fullfile(dirSrvrSpinalAdapt,'Data',participantID);
-dirSrvrRaw = fullfile(dirSrvrSpinalAdapt,'RawBackupData',participantID);
+dirSrvrData        = fullfile(dirSrvrSpinalAdapt, 'Data', participantID);
+dirSrvrRaw         = fullfile(dirSrvrSpinalAdapt, 'RawBackupData', ...
+    participantID);
 
-% define source and destination paths in specified order
-srcs = {dirData ...
-    dirProfiles fullfile(dirNIRS,participantID) ...
-    dirData fullfile(dirNIRS,participantID) ...
-    fullfile(dirExpGUI,'datlogs') fullfile(dirExpGUI,'datlogs')};
-dests = {fullfile(dirSrvrData,'Vicon') ...
-    fullfile(dirSrvrData,'SpeedProfiles') fullfile(dirSrvrData,'NIRS') ...
-    fullfile(dirSrvrRaw,'Vicon') fullfile(dirSrvrRaw,'NIRS') ...
-    fullfile(dirSrvrData,'DataLogs') fullfile(dirSrvrRaw,'DataLogs')};
+%% Transfer Files to Server
+% Sources and destinations are paired in order; data is transferred to
+% both the primary Data/ and the raw backup RawBackupData/ locations.
+srcs  = {dirData ...
+    dirProfiles fullfile(dirNIRS, participantID) ...
+    dirData fullfile(dirNIRS, participantID) ...
+    fullfile(dirExpGUI, 'datlogs') fullfile(dirExpGUI, 'datlogs')};
+dests = {fullfile(dirSrvrData, 'Vicon') ...
+    fullfile(dirSrvrData, 'SpeedProfiles') fullfile(dirSrvrData, 'NIRS') ...
+    fullfile(dirSrvrRaw, 'Vicon') fullfile(dirSrvrRaw, 'NIRS') ...
+    fullfile(dirSrvrData, 'DataLogs') fullfile(dirSrvrRaw, 'DataLogs')};
 
-% check if PC1 data directory exists, else raise a warning
 if ~isfolder(dirData)
-    error('PC1 data directory does not exist: %s\n',dirData);
+    error('PC1 data directory does not exist: %s\n', dirData);
 end
 
-% transfer data using utility function with error handling
 try
-    utils.transferDataSess(srcs,dests,threshTime);  % transfer data
+    utils.transferDataSess(srcs, dests, threshTime);
 catch ME
-    warning(ME.identifier,'Data transfer failed: %s\n',ME.message);
+    warning(ME.identifier, 'Data transfer failed: %s\n', ME.message);
     return;
 end
 
-% check if destination directory was created and populated
-if ~isfolder(fullfile(dirSrvrData,'Vicon'))
+if ~isfolder(fullfile(dirSrvrData, 'Vicon'))
     error('Data transfer unsuccessful; destination folder not found.');
 end
 
 % TODO: update to automatically rename data logs by trial name for C3D2MAT
 
+%% Create Analysis Directories
 pathsCreate = {
-    fullfile(dirSrvrData,'Results')
-    fullfile(dirSrvrData,'SyncFiles')
-    fullfile(dirSrvrData,'NASATLX')
+    fullfile(dirSrvrData, 'Results')
+    fullfile(dirSrvrData, 'SyncFiles')
+    fullfile(dirSrvrData, 'NASATLX')
     };
 
-for p = 1:length(pathsCreate)       % for each path to create, ...
-    if ~isfolder(pathsCreate{p})    % if does not already exist, ...
-        mkdir(pathsCreate{p});      % create it
+for ii = 1:length(pathsCreate)
+    if ~isfolder(pathsCreate{ii})
+        mkdir(pathsCreate{ii});
     end
 end
 
 end
-
