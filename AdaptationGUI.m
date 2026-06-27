@@ -725,7 +725,45 @@ STOP = true;
 %     set(handles.Status_textbox,'BackgroundColor','green');
 % end
 
+guidata(hObject, handles);
 
+% --- Executes on button press in Pause_togglebutton.
+function Pause_togglebutton_Callback(hObject, eventdata, handles)
+%PAUSE_TOGGLEBUTTON_CALLBACK Toggle the global PAUSE flag and GUI state.
+%
+%   Pausing disables Execute and shows a Paused status; resuming
+%   restores the status text and color captured before the pause.
+%
+% Inputs:
+%   hObject - handle to Pause_togglebutton (see GCBO)
+%   eventdata - reserved for a future MATLAB version
+%   handles - structure with handles and user data (see GUIDATA)
+%
+% Toolbox Dependencies:
+%   None
+
+global PAUSE
+global currentstring
+global currentcolor
+
+PAUSE = get(hObject, 'Value');
+
+if PAUSE == 0
+    set(handles.Pause_togglebutton, 'String', 'Pause');
+    % refreshes the status to what it was before pause
+    set(handles.Status_textbox, 'String', currentstring);
+    set(handles.Status_textbox, 'BackgroundColor', currentcolor);
+    set(handles.Execute_button, 'Enable', 'On');
+else
+    currentstring = get(handles.Status_textbox, 'String');
+    currentcolor = get(handles.Status_textbox, 'BackgroundColor');
+    set(handles.Pause_togglebutton, 'String', 'Resume');
+    set(handles.Status_textbox, 'String', 'Paused');
+    set(handles.Status_textbox, 'BackgroundColor', 'Yellow');
+
+    % disable execute button so it can't be pressed again, causing a crash
+    set(handles.Execute_button, 'Enable', 'Off');
+end
 
 guidata(hObject, handles);
 
@@ -796,39 +834,6 @@ end
 save(savename, 'listbox');
 % save savename;
 
-guidata(hObject, handles);
-
-
-% --- Executes on button press in Pause_togglebutton.
-function Pause_togglebutton_Callback(hObject, eventdata, handles)
-% hObject    handle to Pause_togglebutton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of Pause_togglebutton
-global PAUSE
-global currentstring
-global currentcolor
-
-PAUSE = get(hObject,'Value');
-
-if PAUSE == 0
-    set(handles.Pause_togglebutton,'String','Pause');
-    set(handles.Status_textbox,'String',currentstring);%refreshes the status to what it was before pause
-    set(handles.Status_textbox,'BackgroundColor',currentcolor);
-    set(handles.Execute_button,'Enable','on');
-else
-    currentstring = get(handles.Status_textbox,'String');
-    currentcolor = get(handles.Status_textbox,'BackgroundColor');
-    set(handles.Pause_togglebutton,'String','Resume');
-    set(handles.Status_textbox,'String','Paused');
-    set(handles.Status_textbox,'BackgroundColor','Yellow');
-
-    %disable execute button so it can't be pressed again, causing a crash
-    set(handles.Execute_button,'Enable','off');
-end
-
-
 set(handles.Status_textbox, 'String', 'Ready');
 set(handles.Status_textbox, 'BackgroundColor', 'Green');
 guidata(hObject, handles);
@@ -853,8 +858,24 @@ elseif LogView == 1
     set(handles.listbox1, 'Visible', 'Off');
 end
 
+guidata(hObject, handles);
 
+% --- Executes on button press in clearlog.
+function clearlog_Callback(hObject, eventdata, handles)
+%CLEARLOG_CALLBACK Clear the event-log listbox contents.
+%
+% Inputs:
+%   hObject - handle to clearlog (see GCBO)
+%   eventdata - reserved for a future MATLAB version
+%   handles - structure with handles and user data (see GUIDATA)
+%
+% Toolbox Dependencies:
+%   None
 
+global listbox
+
+listbox = {''};
+set(handles.listbox1, 'String', listbox);
 guidata(hObject, handles);
 
 % ============================================================
@@ -881,7 +902,15 @@ function StoptreadmillSTOP_checkbox_Callback(hObject, eventdata, handles)
 function StoptreadmillEND_checkbox_Callback(hObject, eventdata, handles)
 % Hint: get(hObject,'Value') returns toggle state of the checkbox
 
+% --- Executes on button press in waitForNexusChkBox.
+function waitForNexusChkBox_Callback(hObject, eventdata, handles)
+% Hint: get(hObject,'Value') returns toggle state of waitForNexusChkBox
 
+% --- Executes during object creation, after setting all properties.
+function EMGWorks_checkbox_CreateFcn(hObject, eventdata, handles)
+
+% --- Executes during object deletion, before destroying properties.
+function EMGWorks_checkbox_DeleteFcn(hObject, eventdata, handles)
 
 % ============================================================
 % =========== Controller Menu & Profile Browse ===============
@@ -981,16 +1010,6 @@ function Incline_Callback(hObject, eventdata, handles)
 % keyboard
 guidata(hObject, handles);
 
-% --- Executes on button press in clearlog.
-function clearlog_Callback(hObject, eventdata, handles)
-% hObject    handle to clearlog (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-global listbox
-
-listbox = {''};
-set(handles.listbox1,'String',listbox);
-guidata(hObject, handles);
 % ============================================================
 % ============= Perturbation / Manual Speed ==================
 % ============================================================
@@ -1037,13 +1056,6 @@ if ispc && isequal(get(hObject, 'BackgroundColor'), ...
     set(hObject, 'BackgroundColor', 'White');
 end
 
-% --- Executes on button press in waitForNexusChkBox.
-function waitForNexusChkBox_Callback(hObject, eventdata, handles)
-% hObject    handle to waitForNexusChkBox (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of waitForNexusChkBox
 % ============================================================
 % ================ Keyboard & Mouse Input ====================
 % ============================================================
@@ -1250,15 +1262,4 @@ function feedbackBox_Callback(hObject, eventdata, handles)
 %   None
 
 global feedbackFlag
-% --- Executes during object creation, after setting all properties.
-function EMGWorks_checkbox_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to EMGWorks_checkbox (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% --- Executes during object deletion, before destroying properties.
-function EMGWorks_checkbox_DeleteFcn(hObject, eventdata, handles)
-% hObject    handle to EMGWorks_checkbox (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 feedbackFlag = hObject.Value;
