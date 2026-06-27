@@ -212,6 +212,26 @@ All other style rules apply, including:
 - Spaces around `=` and after `,`.
 - Full doc blocks on all meaningful callbacks (`OpeningFcn`,
   `OutputFcn`, and any callback containing substantive logic).
+- Full doc blocks on any hand-written local helper subfunction
+  (e.g. a factored `setStatus`/`pulseSerialPort`). The stub-callback
+  exemption covers ONLY auto-generated empty `_Callback`/`_CreateFcn`
+  bodies — not helpers you add.
+- Trailing semicolons on output-producing statements (`set`, `disp`,
+  `error`, `load`, `plot`, etc.); prefer `disp`/`fprintf` over the
+  discouraged `display`. Suppress stray unsuppressed expressions and
+  use an explicit `disp(...)` when console output is intended.
+- Section banners: this file uses exemplar-style full-width
+  `% ====` banners (see `GetInfoGUI.m`) to group callbacks into
+  logical panels, in place of `%%` headers, because GUIDE callbacks
+  are independent top-level functions rather than sequential phases.
+
+GUIDE callbacks keep their fixed `(hObject, eventdata, handles)`
+signature even when an argument is unused — do NOT replace unused
+callback arguments with `~`, and ignore the matching `checkcode`
+"input argument might be unused" advisory for callbacks (it does not
+apply to the GUIDE dispatch signature). The "global variables are
+inefficient" advisory is likewise expected for the shared
+`STOP`/`PAUSE` and UI globals and is not a defect to silence here.
 
 ## Code Organization
 - Use `%%` section headers for all named logical phases; header text
