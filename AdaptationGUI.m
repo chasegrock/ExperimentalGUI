@@ -1263,3 +1263,29 @@ function feedbackBox_Callback(hObject, eventdata, handles)
 
 global feedbackFlag
 feedbackFlag = hObject.Value;
+
+% ============================================================
+% ===================== Helper Functions =====================
+% ============================================================
+
+% --- Pulse a serial port to toggle a capture device.
+function pulseSerialPort(comPort)
+%PULSESERIALPORT Drive a serial control line high then low.
+%
+%   Opens then immediately closes the named serial port, pulsing its
+%   control line. Vicon Nexus and EMGWorks watch this pulse to toggle
+%   capture on or off.
+%
+% Inputs:
+%   comPort - serial port name, e.g. 'COM1' (Vicon) or 'COM14' (EMG)
+%
+% Toolbox Dependencies:
+%   Instrument Control Toolbox (serial)
+
+pulseHoldDur = 0.1; % s, hold the line high long enough to register
+
+sp = serial(comPort);
+fopen(sp);
+pause(pulseHoldDur);
+fclose(sp);
+delete(sp);
