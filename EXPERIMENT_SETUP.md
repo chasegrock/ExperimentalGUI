@@ -248,8 +248,8 @@ SpinalAdapt require coordination with the lead experimenter).
 | Interface | Path root / location | Representative symbols |
 |---|---|---|
 | Vicon DataStream SDK v1.11.0 (`.NET`; `ViconDataStreamSDK_DotNET.dll`) | `C:\Program Files\Vicon\DataStream SDK\Win64\dotNET\` | `ViconDataStreamSDK.DotNET.Client`, `MyClient.GetFrame`, `MyClient.GetMarkerGlobalTranslation`, `MyClient.GetDeviceOutputValue` |
-| Vicon Nexus MATLAB SDK | Installed with Nexus; on lab-PC MATLAB path — **distinct from DataStream SDK** (confirm: `which ViconNexus`) | `ViconNexus` class — used by Nexus pipeline scripts (e.g. `generateHreflexRecruitmentCurves.m`); not called directly by ExperimentalGUI |
-| Bertec treadmill comm layer | `C:\Users\Public\Documents\MATLAB\` (lab PC) | `getPayload`, `sendTreadmillPacket`, `readTreadmillPacket`, `openTreadmillComm`, `getCurrentData` |
+| Vicon Nexus MATLAB SDK | `W:\Nathan\ViconNexusSDK\MATLAB\` (server drive; distinct from DataStream SDK) | `ViconNexus` class — used by Nexus pipeline scripts (e.g. `generateHreflexRecruitmentCurves.m`); not called directly by ExperimentalGUI |
+| Bertec treadmill comm layer | `C:\Users\Public\Documents\MATLAB\HMRLhardware\TreadmillInterface\` (lab PC) | `getPayload`, `sendTreadmillPacket`, `readTreadmillPacket`, `openTreadmillComm`, `getCurrentData` |
 | labTools post-processing | `C:\Users\cntctsml\Documents\GitHub\labTools\` | `dataMotion.processAndFillMarkerGapsSession`, `dataMotion.exportSessionToC3D` |
 | Artinis Oxysoft (fNIRS) COM API | installed application | `actxserver('OxySoft.OxyApplication')` |
 | Arduino H-reflex firmware | running device (source in `HreflexStimArduino/`) | serial `0`/`1`/`2`/`3` handshake |
@@ -275,13 +275,6 @@ toolbox). The exceptions:
 
 ### Unverified / risk
 
-- The treadmill comm functions (`getPayload`, `sendTreadmillPacket`,
-  `readTreadmillPacket`, `openTreadmillComm`, `getCurrentData`) are
-  **not** in the labTools repo, despite older docs attributing them
-  there. Their assumed home is `C:\Users\Public\Documents\MATLAB\` on the
-  lab PC; this has not been verified from a clean checkout. If that tree
-  is reorganized, the controllers break silently. Confirm with
-  `which getPayload` on the lab PC.
 - `NexusGetFrame` and `openNexusIface` are not found in this repo, in
   labTools, in the DataStream SDK, or in the Nexus MATLAB SDK naming.
   They appear only in legacy code paths in `Dulce_grad_betarev2.m` and
