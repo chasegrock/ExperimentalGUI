@@ -198,6 +198,71 @@ maxEvals    = round(options.MaxEvals);
 Only align assignments that are genuinely related. Do not
 artificially group unrelated lines just to create alignment.
 
+### GUI Code (GUIDE-Generated Files)
+
+`AdaptationGUI.m` is generated and maintained by MATLAB GUIDE
+(its layout lives in the companion `AdaptationGUI.fig`). GUIDE
+imposes a few conventions that override the general rules above.
+
+**Exemptions.** GUIDE-generated files are exempt from:
+
+- The `end` keyword after each function definition (GUIDE omits it,
+  so the file is a sequence of unterminated functions).
+- The H1 doc-block format for auto-generated stub callbacks — empty
+  `_Callback` / `_CreateFcn` bodies with no logic keep their GUIDE
+  hint comments.
+- The 76-character line limit inside the
+  `% Begin/End initialization code - DO NOT EDIT` block.
+
+**Rules that still apply.** Everything else holds. In particular:
+
+- Property strings use PascalCase for both names and values
+  (`set(h, 'BackgroundColor', 'White')`,
+  `set(h, 'NextPlot', 'Replace')`). MATLAB is case-insensitive here;
+  this is a style convention only.
+- Output-producing statements (`set`, `disp`, `error`, `load`,
+  `plot`, …) end with a semicolon. Prefer `disp`/`fprintf` over the
+  discouraged `display`. Do not leave bare unsuppressed expressions
+  to print — assign-then-`disp` when console output is intended.
+- Meaningful callbacks (`OpeningFcn`, `OutputFcn`, and any callback
+  with substantive logic) get full doc blocks.
+- **Hand-written local helper subfunctions are NOT stubs** — give
+  them a full doc block. The stub exemption covers only the empty
+  auto-generated callbacks. For example, a factored status-setter
+  and a serial-pulse helper:
+
+```matlab
+% --- Set the status textbox text and background color together.
+function setStatus(handles, str, color)
+%SETSTATUS Update the status textbox string and background color.
+%
+% Inputs:
+%   handles - structure with handles and user data (see GUIDATA)
+%   str - status text to display
+%   color - background color name or RGB triplet
+%
+% Toolbox Dependencies:
+%   None
+
+set(handles.Status_textbox, 'String', str);
+set(handles.Status_textbox, 'BackgroundColor', color);
+```
+
+**Section banners.** Group the independent callbacks into logical
+panels with exemplar-style full-width `% ====` banners (see
+`labTools/gui/importc3d/GetInfoGUI.m`) rather than `%%` phase
+headers — GUIDE callbacks are independent top-level functions, not
+sequential phases of one routine.
+
+**Fixed callback signature.** Keep the GUIDE
+`(hObject, eventdata, handles)` argument list on every callback even
+when an argument is unused. Do NOT replace unused callback arguments
+with `~`, and ignore the matching `checkcode` "input argument might
+be unused" advisory for callbacks — it does not apply to the GUIDE
+dispatch signature. The "global variables are inefficient" advisory
+is similarly expected for the shared `STOP`/`PAUSE` and UI globals
+and is not a defect to silence here.
+
 ---
 
 ## Arduino / C++ Code Style
