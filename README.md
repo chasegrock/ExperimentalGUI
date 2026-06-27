@@ -33,17 +33,19 @@ addpath(genpath('C:\Users\cntctsml\Documents\GitHub\labTools\'));
 | Path root | Provides | Example symbols |
 |---|---|---|
 | `C:\Program Files\Vicon\` | Vicon DataStream SDK v1.11.0 (`.NET`; `ViconDataStreamSDK_DotNET.dll`) — real-time motion capture streaming | `ViconDataStreamSDK.DotNET.Client`, `MyClient.GetFrame`, `MyClient.GetMarkerGlobalTranslation`, `MyClient.GetDeviceOutputValue` |
-| `C:\Users\Public\Documents\MATLAB\` | Bertec treadmill communication layer (UDP packet build/send/read) | `getPayload`, `sendTreadmillPacket`, `readTreadmillPacket`, `openTreadmillComm`, `getCurrentData` |
+| `C:\Users\Public\Documents\MATLAB\` | Bertec treadmill communication layer — UDP packet build/send/read (functions in `HMRLhardware\TreadmillInterface\` subfolder) | `getPayload`, `sendTreadmillPacket`, `readTreadmillPacket`, `openTreadmillComm`, `getCurrentData` |
 | `C:\Users\cntctsml\Documents\GitHub\labTools\` | PittSMLlab `labTools` — used here for post-trial C3D export and marker-gap filling | `dataMotion.processAndFillMarkerGapsSession`, `dataMotion.exportSessionToC3D` |
+| `W:\Nathan\ViconNexusSDK\` | Vicon Nexus MATLAB SDK — `ViconNexus` scripting class (server drive; distinct from DataStream SDK). **Not required by ExperimentalGUI** — used only by Nexus pipeline scripts such as `generateHreflexRecruitmentCurves.m`. | `ViconNexus` |
 
 > **NOTE:** The treadmill comm functions (`getPayload`,
-> `sendTreadmillPacket`, etc.) live on the lab PC under
+> `sendTreadmillPacket`, etc.) are in the
+> `HMRLhardware\TreadmillInterface\` subfolder under
 > `C:\Users\Public\Documents\MATLAB\`, **not** in `labTools`. The actual
 > `labTools` runtime dependency is the `dataMotion.*` namespace, called
 > by the `studies/*` data-transfer scripts. The `ViconNexus` class is
-> **not** part of the DataStream SDK above — it comes from the separate
-> Vicon Nexus MATLAB SDK (installed with Nexus; confirm:
-> `which ViconNexus` on the lab PC). See
+> **not** part of the DataStream SDK above and is not required by
+> ExperimentalGUI — it lives on the server drive at
+> `W:\Nathan\ViconNexusSDK\MATLAB\`. See
 > [EXPERIMENT_SETUP.md](EXPERIMENT_SETUP.md) for the full editable-boundary
 > map.
 
