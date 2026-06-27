@@ -128,7 +128,7 @@ else
     randTiedStepsCtr = randi([tiedStepsMin, tiedStepsMax], ...
         totalCtrTrains, repPerTrain);
 
-    restPadSteps = zeros(50, 1);    % 50-stride zero-speed rest between bouts
+    restPadSteps = zeros(50, 1);  % zero-speed rest between bouts
 
     % 10-stride ramp from 10% to 100% of fast speed at bout start;
     % endpoint excluded so stride 10 approaches (but does not reach) fast.
@@ -161,7 +161,8 @@ else
         stimL = [stimL; restPadSteps];
         velR  = velL;
         stimR = stimL;
-        save(fullfile(profileDir, ['CtrlTrain_' mat2str(ctTrain) '.mat']), ...
+        save(fullfile(profileDir, ...
+            ['CtrlTrain_' mat2str(ctTrain) '.mat']), ...
             'velL', 'velR', 'stimL', 'stimR');
     end
 
