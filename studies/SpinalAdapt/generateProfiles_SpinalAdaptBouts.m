@@ -1,5 +1,5 @@
 function profileDir = generateProfiles_SpinalAdaptBouts( ...
-    slow, fast, baseOnly, profileDir, fastLeg, ramp2Split)
+    slowSpeed, fastSpeed, baseOnly, profileDir, fastLeg)
 %GENERATEPROFILES_SPINALADAPTBOUTS Generate speed and stim profiles for
 % the SpinalAdapt protocol and save them to disk.
 %
@@ -32,9 +32,6 @@ function profileDir = generateProfiles_SpinalAdaptBouts( ...
 %
 % See also RUNPROTOCOL_SPINALADAPTBOUTS, RUNWALKINGCALIBRATIONS.
 
-if nargin == 5          % fastLeg provided but not ramp2Split
-    ramp2Split = false;
-end
 if ~exist(profileDir, 'dir')
     mkdir(profileDir);
 end
@@ -42,9 +39,9 @@ end
 if baseOnly
 
     %% Define Baseline and Calibration Constants
-    baseTiedStrides    = 150;   % strides; TM tied baseline trial length
+    baseTMStrides      = 100;   % strides; TM tied baseline trial length
     baseOGStrides      = 100;   % strides; OG baseline trial length
-    calibStrides       = 400;   % strides; H-reflex calibration trial length
+    calibStrides       = 400;   % strides; H-reflex calib trial length
     stimCycleLen       = 10;    % strides; H-reflex stim cycle length
     stimCycleOffset    = 4;     % strides; pulse position within cycle
     calibSettleStrides = 5;     % strides; no-stim period at calib start
@@ -54,35 +51,31 @@ if baseOnly
         zeros(stimCycleLen - stimCycleOffset, 1)];
 
     % fast
-    velL  = ones(baseTiedStrides, 1) * fast;
+    velL  = ones(baseTMStrides, 1) * fastSpeed;
     velR  = velL;
-    stimL = repmat(stimCycle, baseTiedStrides / stimCycleLen, 1);
+    stimL = repmat(stimCycle, baseTMStrides / stimCycleLen, 1);
     stimR = stimL;
-    save(fullfile(profileDir, 'TMBaseFast.mat'), ...
+    save(fullfile(profileDir, 'TMBaselineFast.mat'), ...
         'velL', 'velR', 'stimL', 'stimR');
 
     % slow
-    velL  = ones(baseTiedStrides, 1) * slow;
+    velL  = ones(baseTMStrides, 1) * slowSpeed;
     velR  = velL;
-    stimL = repmat(stimCycle, baseTiedStrides / stimCycleLen, 1);
+    stimL = repmat(stimCycle, baseTMStrides / stimCycleLen, 1);
     stimR = stimL;
-    save(fullfile(profileDir, 'TMBaseSlow.mat'), ...
+    save(fullfile(profileDir, 'TMBaselineSlow.mat'), ...
         'velL', 'velR', 'stimL', 'stimR');
 
-    %% Generate OG Baseline Profiles (no stim columns)
+    %% Generate OG Baseline Profiles
     % slow
-    velL = ones(baseOGStrides, 1) * slow;
+    velL = ones(baseOGStrides, 1) * slowSpeed;
     velR = velL;
-%     stimL = repmat([0 0 0 1 0 0 0 0 1 0]',10,1);
-%     stimR = stimL;
-    save(fullfile(profileDir, 'OGBaseSlow.mat'), 'velL', 'velR');
+    save(fullfile(profileDir, 'OGBaselineSlow.mat'), 'velL', 'velR');
 
     % fast
-    velL = ones(baseOGStrides, 1) * fast;
+    velL = ones(baseOGStrides, 1) * fastSpeed;
     velR = velL;
-%     stimL = repmat([0 0 0 1 0 0 0 0 1 0]',10,1);
-%     stimR = stimL;
-    save(fullfile(profileDir, 'OGBaseFast.mat'), 'velL', 'velR');
+    save(fullfile(profileDir, 'OGBaselineFast.mat'), 'velL', 'velR');
 
     %% Generate H-Reflex Walking Calibration Profiles
     % Build stim schedule: calibSettleStrides no-stim settle period, then
@@ -93,7 +86,7 @@ if baseOnly
     stimSteps = calibSettleStrides + cumsum(stimSteps);
 
     % fast
-    velL = ones(calibStrides, 1) * fast;
+    velL = ones(calibStrides, 1) * fastSpeed;
     velR = velL;
     stimL = zeros(calibStrides, 1);
     stimL(stimSteps) = 1;
@@ -102,7 +95,7 @@ if baseOnly
         'velL', 'velR', 'stimL', 'stimR');
 
     % slow
-    velL = ones(calibStrides, 1) * slow;
+    velL = ones(calibStrides, 1) * slowSpeed;
     velR = velL;
     save(fullfile(profileDir, 'CalibrationSlow.mat'), ...
         'velL', 'velR', 'stimL', 'stimR');
@@ -110,135 +103,74 @@ if baseOnly
 else
 
     %% Define Training Protocol Constants
-    slowStridesPerBout   = 20;  % strides; slow-belt segment per bout rep
-    tiedStepsMin         = 50;  % strides; min randomized tied segment
-    tiedStepsMax         = 60;  % strides; max randomized tied segment
-    post1TiedStrides     = 50;  % strides; tied-fast segment in Post1
-    post1NegShortStrides = 30;  % strides; neg-short-split in Post1
-    post1PostNegStrides  = 100; % strides; tied-fast post-neg-short
-    post2Strides         = 200; % strides; final post-adaptation trial
-    postAdaptStimPeriod  = 5;   % strides; stim cycle in post-adapt sections
-    baseTiedStrides      = 150; % strides; post-adapt append to last split
+    boutsPerTrial    = 10;   % bouts per training trial
+    rampStrides      = 10;   % strides; speed ramp from rest at bout start
+    ssStrides        = 10;   % strides; steady-state walking per bout
+    boutRestStrides  = 30;   % strides; max rest-pad between bouts
+    boutStimPeriod   = 5;    % strides; H-reflex stim cycle during SS
+    totalSplitTrials = 8;    % number of split-belt training trials
+    postStrides      = 100;  % strides; per post-adaptation trial
 
-    rng(100);               % fixed seed for reproducible bout randomization
-    repPerTrain      = 4;   % bout repetitions per training condition
-    totalSplitTrains = 5;   % number of split-belt training conditions
-    totalCtrTrains   = 2;   % number of tied (control) training conditions
+    %% Build Per-Bout Speed and Stim Vectors
+    % Ramp: linear increase from rest to target speed over rampStrides.
+    rampFastBelt = (1:rampStrides)' / rampStrides * fastSpeed;
+    rampSlowBelt = (1:rampStrides)' / rampStrides * slowSpeed;
 
-    randTiedStepsSplit = randi([tiedStepsMin, tiedStepsMax], ...
-        totalSplitTrains, repPerTrain);
-    randTiedStepsSplit(1, 1) = slowStridesPerBout;  % 1st train, 1st bout
-    randTiedStepsCtr = randi([tiedStepsMin, tiedStepsMax], ...
-        totalCtrTrains, repPerTrain);
+    % Stim during SS: one pulse at the start of each boutStimPeriod.
+    boutStimCycle = [1; zeros(boutStimPeriod - 1, 1)];
+    ssStim = repmat(boutStimCycle, ssStrides / boutStimPeriod, 1);
+    restPad = zeros(boutRestStrides, 1);
 
-    restPadSteps = zeros(50, 1);  % zero-speed rest between bouts
+    %% Build Control Bouts Profile (Tied Walking)
+    % Structure per bout: rest pad | ramp to fastSpeed | SS at fastSpeed.
+    boutVelCtrl  = [rampFastBelt; ones(ssStrides, 1) * fastSpeed];
+    boutStimCtrl = [zeros(rampStrides, 1); ssStim];
 
-    % 10-stride ramp from 10% to 100% of fast speed at bout start;
-    % endpoint excluded so stride 10 approaches (but does not reach) fast.
-    ramp2Tied = linspace(0.1 * fast, fast, 11);
-    ramp2Tied = ramp2Tied(1:end-1)';
-    ramp2TiedStim = zeros(size(ramp2Tied));
-
-    %% Build Ramp-to-Split Profile
-    if ramp2Split   % 20-stride gradual ramp from tied to split speed
-        rampToSplitStrides = 20;    % strides; gradual fast-to-slow ramp
-        ramp2SplitSteps = linspace(fast, slow, rampToSplitStrides)';
-        ramp2SplitStims = zeros(rampToSplitStrides, 1);
-    else            % abrupt transition; empty arrays omitted below
-        ramp2SplitSteps = [];
-        ramp2SplitStims = [];
+    velL = [];  stimL = [];
+    for ii = 1:boutsPerTrial
+        velL  = [velL;  restPad; boutVelCtrl];
+        stimL = [stimL; restPad; boutStimCtrl];
     end
-
-    %% Build Control Train Profiles (Tied Walking)
-    for ctTrain = 1:totalCtrTrains
-        velL  = [];  stimL = [];
-        for ii = 1:repPerTrain
-            velL = [velL; restPadSteps; ramp2Tied; ...
-                ones(randTiedStepsCtr(ctTrain, ii), 1) * fast; ...
-                ramp2SplitSteps; ones(slowStridesPerBout, 1) * slow];
-            stimL = [stimL; restPadSteps; ramp2TiedStim; ...
-                ones(randTiedStepsCtr(ctTrain, ii), 1); ...
-                ramp2SplitStims; ones(slowStridesPerBout, 1)];
-        end
-        velL  = [velL; restPadSteps];
-        stimL = [stimL; restPadSteps];
-        velR  = velL;
-        stimR = stimL;
-        save(fullfile(profileDir, ...
-            ['CtrlTrain_' mat2str(ctTrain) '.mat']), ...
-            'velL', 'velR', 'stimL', 'stimR');
-    end
-
-    %% Build Split Train Profiles
-    for splitTrain = 1:totalSplitTrains
-        velL  = [];  velR = [];  stimL = [];
-        for ii = 1:repPerTrain
-            velL = [velL; restPadSteps; ramp2Tied; ...
-                ones(randTiedStepsSplit(splitTrain, ii), 1) * fast; ...
-                ramp2SplitSteps; ones(slowStridesPerBout, 1) * slow];
-            velR = [velR; restPadSteps; ramp2Tied; ...
-                ones(randTiedStepsSplit(splitTrain, ii), 1) * fast; ...
-                ramp2SplitSteps; ones(slowStridesPerBout, 1) * fast];
-            stimL = [stimL; restPadSteps; ramp2TiedStim; ...
-                ones(randTiedStepsSplit(splitTrain, ii), 1); ...
-                ramp2SplitStims; ones(slowStridesPerBout, 1)];
-        end
-        velL  = [velL; restPadSteps];
-        velR  = [velR; restPadSteps];
-        stimL = [stimL; restPadSteps];
-
-        if splitTrain == totalSplitTrains   % last split: append post-adapt
-            velL  = [velL; ones(baseTiedStrides, 1) * fast];
-            velR  = [velR; ones(baseTiedStrides, 1) * fast];
-            postAdaptStimCycle = [1; zeros(postAdaptStimPeriod - 1, 1)];
-            stimL = [stimL; repmat(postAdaptStimCycle, ...
-                baseTiedStrides / postAdaptStimPeriod, 1)];
-        end
-
-        stimR = stimL;
-
-        if strcmp(fastLeg, 'L')     % swap leg profiles if left is fast
-            temp  = velR;
-            velR  = velL;
-            velL  = temp;
-        end
-        save(fullfile(profileDir, ...
-            ['PreSplitTrain_' num2str(splitTrain) '.mat']), ...
-            'velL', 'velR', 'stimL', 'stimR');
-    end
-
-    %% Build Post-Train Profiles
-    % Post1: 50 tied-fast + 30 neg-short split + 100 tied-fast.
-    % Default: right belt fast (neg-short = left fast); swap if fastLeg='L'.
-    post1StimCycle = [zeros(postAdaptStimPeriod - 1, 1); 1]; % pulse at end
-    velR  = [repmat(fast, post1TiedStrides, 1); ...
-             ones(post1NegShortStrides, 1) * slow; ...
-             ones(post1PostNegStrides, 1) * fast];
-    velL  = [repmat(fast, post1TiedStrides, 1); ...
-             ones(post1NegShortStrides, 1) * fast; ...
-             ones(post1PostNegStrides, 1) * fast];
-    stimL = [repmat(post1StimCycle, ...
-                 post1TiedStrides / postAdaptStimPeriod, 1); ...
-             zeros(post1NegShortStrides, 1); ...
-             repmat(post1StimCycle, ...
-                 post1PostNegStrides / postAdaptStimPeriod, 1)];
+    velL  = [velL;  restPad];
+    stimL = [stimL; restPad];
+    velR  = velL;
     stimR = stimL;
-    if strcmp(fastLeg, 'L')     % swap leg velocity profiles; stim unchanged
-        temp  = velR;
-        velR  = velL;
-        velL  = temp;
-    end
-    save(fullfile(profileDir, 'Post1WtNegShort.mat'), ...
+    save(fullfile(profileDir, 'CtrlBouts.mat'), ...
         'velL', 'velR', 'stimL', 'stimR');
 
-    % Post2: 200 strides tied-fast. Pulse at start of each stim cycle.
-    postAdaptStimCycle = [1; zeros(postAdaptStimPeriod - 1, 1)];
-    velL  = repmat(fast, post2Strides, 1);
-    velR  = repmat(fast, post2Strides, 1);
-    stimR = repmat(postAdaptStimCycle, ...
-        post2Strides / postAdaptStimPeriod, 1);
-    stimL = stimR;
-    save(fullfile(profileDir, 'Post2.mat'), ...
+    %% Build Split Bouts Profile
+    % Structure per bout: rest pad | split ramp | SS at fast/slow speeds.
+    % Default: right belt fast, left belt slow; swap if fastLeg = 'L'.
+    boutVelFast  = [rampFastBelt; ones(ssStrides, 1) * fastSpeed];
+    boutVelSlow  = [rampSlowBelt; ones(ssStrides, 1) * slowSpeed];
+    boutStimSplit = [zeros(rampStrides, 1); ssStim];
+
+    velL = [];  velR = [];  stimL = [];
+    for ii = 1:boutsPerTrial
+        velL  = [velL;  restPad; boutVelSlow];
+        velR  = [velR;  restPad; boutVelFast];
+        stimL = [stimL; restPad; boutStimSplit];
+    end
+    velL  = [velL;  restPad];
+    velR  = [velR;  restPad];
+    stimL = [stimL; restPad];
+    stimR = stimL;
+
+    if strcmp(fastLeg, 'L')     % swap leg profiles if left is fast
+        temp = velR;
+        velR = velL;
+        velL = temp;
+    end
+    save(fullfile(profileDir, 'SplitBouts.mat'), ...
+        'velL', 'velR', 'stimL', 'stimR');
+
+    %% Build Post-Adaptation Profile (Tied Fast Walking)
+    stimPost = repmat(boutStimCycle, postStrides / boutStimPeriod, 1);
+    velL  = ones(postStrides, 1) * fastSpeed;
+    velR  = velL;
+    stimL = stimPost;
+    stimR = stimL;
+    save(fullfile(profileDir, 'PostAdapt.mat'), ...
         'velL', 'velR', 'stimL', 'stimR');
 
 end
