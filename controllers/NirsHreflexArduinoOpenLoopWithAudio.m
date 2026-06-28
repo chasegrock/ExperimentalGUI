@@ -102,7 +102,7 @@ end
 %% Open Arduino Serial Communication (If H-reflex Is Enabled)
 %These parameters should ONLY BE CHANGED IF YOU KNOW WHAT YOU ARE DOING.
 percentSS2Stim = 0.50; % target fraction of single stance for the stim (diagnostic only; Arduino applies its own copy of this target)
-alpha          = 0.9;  % MATLAB-side smoothing factor for estSSL/R (diagnostic only, 0 < alpha <= 1)
+alpha          = 0.7;  % MATLAB-side smoothing factor for estSSL/R (diagnostic only, 0 < alpha <= 1); matches the Arduino firmware's alpha so the logged estSS mirrors the device
 estSSLInit     = 396.6; % initial single-stance duration estimate (ms); from Liu et al. 2014 normative gait data, see Arduino sketch header for derivation
 estSSRInit     = 396.6;
 
@@ -140,8 +140,10 @@ if hreflex_present
     canStim = false; % latches true at single-stance onset; allows exactly one gate send per stance
     estSSL = estSSLInit; % running estimate of left single-stance duration (ms, diagnostic only)
     estSSR = estSSRInit;
-    stimDelayL = now(); % diagnostic-only target delay, logged alongside each stim
-    stimDelayR = now();
+    durSSL = estSSLInit; % most recent measured left single-stance duration (ms); seeded with the normative estimate until the first stride completes
+    durSSR = estSSRInit;
+    stimDelayL = estSSLInit * percentSS2Stim; % diagnostic-only target delay (ms), logged alongside each stim
+    stimDelayR = estSSRInit * percentSS2Stim;
     echoBuf = ''; % partial serial line carried across iterations for the device stim echo
 end
 
@@ -442,6 +444,10 @@ try     % so that if something fails, communications are closed properly
         try
             fprintf('Sending start command to Arduino state machine...\n');
             write(portArduino,0,'int16');    % reset step counters & start
+            % Clear any bytes left in the OS input buffer from a prior
+            % session before the loop starts draining stim echoes; command
+            % 0 produces no echo, so nothing of ours is discarded here.
+            flush(portArduino,'input');
             fprintf('Start command sent successfully.\n');
         catch ME
             warning(ME.identifier,['Failed to send start command to ' ...
@@ -589,7 +595,10 @@ try     % so that if something fails, communications are closed properly
                     datlog.stepdata.RHSdata(RstepCount-1,:) = [RstepCount-1 now() framenum.Value];
                     % RHS marks the end of single stance L
                     % compute duration of left leg single stance phase
-                    durSSL = RHSTime(RstepCount) - RTOTime(RstepCount);
+                    % (RHSTime/RTOTime are datenums in days; convert to ms
+                    % so durSSL/estSSL stay in ms like the Arduino's copy)
+                    durSSL = (RHSTime(RstepCount) - RTOTime(RstepCount)) ...
+                        * 86400000; % days -> ms
                     % estimate single stance duration using exponential updating factor
                     estSSL = alpha * durSSL + (1.0 - alpha) * estSSL;
                     stimDelayL = estSSL * percentSS2Stim;
@@ -612,7 +621,10 @@ try     % so that if something fails, communications are closed properly
                     datlog.stepdata.LHSdata(LstepCount-1,:) = [LstepCount-1 now() framenum.Value];
                     % LHS marks the end of single stance R
                     % compute duration of right leg single stance phase
-                    durSSR = LHSTime(LstepCount) - LTOTime(LstepCount);
+                    % (LHSTime/LTOTime are datenums in days; convert to ms
+                    % so durSSR/estSSR stay in ms like the Arduino's copy)
+                    durSSR = (LHSTime(LstepCount) - LTOTime(LstepCount)) ...
+                        * 86400000; % days -> ms
                     % estimate single stance duration using exponential updating factor
                     estSSR = alpha * durSSR + (1.0 - alpha) * estSSR;
                     stimDelayR = estSSR * percentSS2Stim;
