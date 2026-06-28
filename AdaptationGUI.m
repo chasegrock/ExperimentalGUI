@@ -309,11 +309,8 @@ if get(handles.EMGWorks_checkbox, 'Value') == 1
         %           pause(3);
     end
 
-    ss = serial('COM14');
-    fopen(ss);
-    pause(0.1);
-    fclose(ss);
     disp(['Opening EMGWorks Port ' datestr(datetime('now'))]);
+    pulseSerialPort('COM14');
     disp(['Done Opening EMGWorks Port ' datestr(datetime('now'))]);
 
     %     %Do something
@@ -362,11 +359,9 @@ if get(handles.Nexus_checkbox, 'Value') == 1
     %      %MOnitor in Nexus watched for pulse to toggle start/stop.
     %      %use orange wire out of serial port to pin 64 on AD board
 
-    s = serial('COM1'); % vicon
-    fopen(s);
-    pause(0.1);
-    fclose(s); % pulses the voltage high then low, toggling capture in Nexus
     disp(['Opening Vicon Port ' datestr(datetime('now'))]);
+    % pulses the voltage high then low, toggling capture in Nexus
+    pulseSerialPort('COM1');
     disp(['Done Opening Vicon Port ' datestr(datetime('now'))]);
     %
     if get(handles.waitForNexusChkBox, 'Value') == 1 && ...
@@ -669,10 +664,8 @@ if startedEMG_flag
     %     XServer.AppActivate('EMGworks 4.0.13 - Workflow Environment Pro'); %Get EMG in front
     %     XServer.SendKeys('^s'); %Stop acquisition
     %     XServer.AppActivate('AdaptationGUI'); %This window
-    fopen(ss);
-    pause(0.1);
-    fclose(ss);
     disp(['Stopping EMG Port ' datestr(datetime('now'))]);
+    pulseSerialPort('COM14');
     disp(['Done Stopping EMG Port ' datestr(datetime('now'))]);
 end
 if startedNexus_flag
@@ -688,10 +681,8 @@ if startedNexus_flag
     %       stopmsg=['<?xml version="1.0" encoding="UTF-8" standalone="no" ?><CaptureStop RESULT="SUCCESS"><Name VALUE="Trial' num2str(TrialNum) '"/><DatabasePath VALUE="' nexuspath '\"/><Delay VALUE="0"/><PacketID VALUE="' num2str(TrialNum*10) '"/></CaptureStop>']; %311
     %       step(myudp,int8(stopmsg));
     %
-    fopen(s);
-    pause(0.1);
-    fclose(s);
     disp(['Closing Vicon Port ' datestr(datetime('now'))]);
+    pulseSerialPort('COM1');
     disp(['Done Closing Vicon Port ' datestr(datetime('now'))]);
 end
 
