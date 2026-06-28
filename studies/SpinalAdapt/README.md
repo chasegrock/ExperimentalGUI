@@ -28,8 +28,25 @@ precise H-reflex stimulation timing before collection resumes.
 
 ## Protocol Notes
 
-- Speed ratio: slow = 0.7 × fast belt speed (abrupt split, no ramp).
-  This ratio was changed from 0.5 after participant SABH16 (July 2024).
+**Fast speed** is computed from the N-Minute Walk Test comfortable
+overground walking speed via `utils.extractSpeedsNMWT()`. Slow speed
+= fast × 0.7 (changed from 0.5 after participant SABH16, July 2024).
+
+**Initial new-protocol design (subject to revision):**
+
+| Condition | # | Strides (excl. rest pads) |
+|---|---|---|
+| TM Baseline Fast / Slow (tied) | 2 | 100 each |
+| OG Baseline Fast / Slow (optional, skipped for SABH) | 2 | 100 each |
+| Control Bouts (tied, 10 bouts × 10 ramp + 10 SS) | 1 | 200 |
+| Split Bouts (10 bouts × 10 ramp + 10 SS per trial) | 8 | 200 each |
+| Control Bouts repeat | 1 | 200 |
+| Post-Adapt (tied fast, 100 strides per trial) | 2 | 100 each |
+
+Total (without OG): 200 + 200 + 8×200 + 200 + 200 = **2,400 strides**.
+With OG baselines: 2,600 strides. Profile files: `CtrlBouts.mat`,
+`SplitBouts.mat`, `PostAdapt.mat`.
+
 - Overground baseline trials: `HreflexOGWithAudio` (GUI menu slot 16).
   The speed feedback range must be adjusted manually between
   participants based on comfortable overground walking speed.
@@ -75,7 +92,8 @@ confirm:
 | `History-PilotStudy2/` | Bout-based protocol — participants SABH01 through at least SABH16+ (July 2023–2025). Speed ratio changed from 0.5 to 0.7 after SABH16 (July 2024); ramp-to-split option added then later removed. Scripts reformatted to CLAUDE.md style (June 2026). |
 
 The active files in this folder are templates for the next protocol version.
-New protocol conditions and ramp logic have not yet been designed.
+Initial protocol design is incorporated (bout structure described below);
+verify all parameters against the final approved protocol before collection.
 
 ## Key Scripts
 
