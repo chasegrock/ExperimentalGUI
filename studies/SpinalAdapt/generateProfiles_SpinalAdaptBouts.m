@@ -3,27 +3,26 @@ function profileDir = generateProfiles_SpinalAdaptBouts( ...
 %GENERATEPROFILES_SPINALADAPTBOUTS Generate speed and stim profiles for
 % the SpinalAdapt protocol and save them to disk.
 %
-%   TEMPLATE — Pilot Study 2 structure preserved as the starting point for
-%   the next protocol. New-protocol conditions and ramp logic have not yet
-%   been designed. See History-PilotStudy2/ for the archived original.
-%
 %   Generates speed (velL, velR) and H-reflex stimulus (stimL, stimR)
 %   profiles for each condition in the SpinalAdapt bout-based protocol.
 %   Call twice per session: once with baseOnly = true to produce baseline
 %   and calibration profiles before fast-leg assignment, then again with
 %   baseOnly = false to produce training and post-adaptation profiles.
 %
+%   TEMPLATE — Updated with new SpinalAdapt protocol bout structure
+%   (10-stride ramp + 10-stride SS per bout, 10 bouts per trial,
+%   8 split trials). Verify all parameters against the final approved
+%   protocol specification before data collection begins.
+%   See History-PilotStudy2/ for the Pilot Study 2 original.
+%
 % Inputs:
-%   slow       - double; slow belt speed (m/s)
-%   fast       - double; fast belt speed (m/s)
-%   baseOnly   - logical; if true, generates only baseline/calibration
-%                profiles (fastLeg and ramp2Split not required)
+%   slowSpeed  - double; slow belt speed (m/s)
+%   fastSpeed  - double; fast belt speed (m/s)
+%   baseOnly   - logical; if true, generate only baseline/calibration
+%                profiles (fastLeg not required)
 %   profileDir - char; path to directory where profiles are saved
 %   fastLeg    - char; 'R' or 'L' — which leg uses the fast belt speed.
 %                Required when baseOnly = false.
-%   ramp2Split - logical; if true, use a gradual ramp from tied to split
-%                speed; if false, use an abrupt transition. Required when
-%                baseOnly = false; default false.
 %
 % Outputs:
 %   profileDir - char; path where profiles were saved (same as input)
