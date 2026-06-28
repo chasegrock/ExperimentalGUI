@@ -142,6 +142,7 @@ if hreflex_present
     estSSR = estSSRInit;
     stimDelayL = now(); % diagnostic-only target delay, logged alongside each stim
     stimDelayR = now();
+    echoBuf = ''; % partial serial line carried across iterations for the device stim echo
 end
 
 %% Load GUI Handle and Audio Files for Countdown
@@ -281,9 +282,29 @@ datlog.TreadmillCommands.read = nan(numFramesEst,4);
 datlog.TreadmillCommands.sent = nan(numFramesEst,4);
 datlog.audioCues.start = [];    % initialize audioCue log fields
 datlog.audioCues.audio_instruction_message = {};
-datlog.stim.header = {'Step#','StimDelayTarget(SerialDate#)','TimeSinceContraTOSerialDate#)'};
+datlog.stim.header = {'Step#','StimDelayTarget(ms)','TimeSinceContraTO(SerialDate#)'};
 datlog.stim.L = [];
 datlog.stim.R = [];
+% Device stim echo (additive; NOT consumed by labTools/SyncDatalog). One
+% row per pulse the Arduino actually delivered, echoed back over serial as
+% timing ground truth (see firmware echoStimRecord). Columns:
+%   leg       - 1 = left, 2 = right
+%   ardStep   - Arduino-side ipsilateral step counter at the pulse
+%   matStep   - MATLAB-side step counter when the echo was drained
+%   stimMs    - Arduino millis() time the pulse fired
+%   toRefMs   - Arduino millis() of the contralateral toe-off reference
+%   estSSms   - Arduino single-stance estimate at the pulse (ms)
+%   dtStimMs  - stimMs - toRefMs, i.e., elapsed time into single stance
+%   durSSms   - MATLAB-measured single-stance duration used as denominator
+%   pctSS     - 100 * dtStimMs / durSSms, the actual % of single stance
+% NOTE: pctSS mixes an Arduino-detected toe-off (numerator) with a
+% MATLAB-detected single-stance duration (denominator), so it carries a
+% small cross-detector error and is an online gross-error check only. The
+% Vicon analog sync pulse (Arduino pins 11/12) recorded on the same clock
+% as the force-plate events is the gold-standard acceptance measurement.
+datlog.stim.deviceEcho.header = {'leg','ardStep','matStep', ...
+    'stimMs','toRefMs','estSSms','dtStimMs','durSSms','pctSS'};
+datlog.stim.deviceEcho.data = [];
 % Loop-timing diagnostics (additive; NOT consumed by labTools/SyncDatalog).
 % loopSegMs columns: [iterTotal, drawnow/GUI, Vicon read+interop, control+
 % stim], all in ms. gateLeadMs* record (gate send time - single-stance
@@ -624,6 +645,40 @@ try     % so that if something fails, communications are closed properly
         end
 
         if hreflex_present      % only do this if has the stimulator
+            % Drain any device stim echoes the Arduino sent since the last
+            % iteration and log the actual %-single-stance per delivered
+            % pulse. This is telemetry only: drainStimEcho reads just the
+            % bytes already waiting in the OS buffer (never blocks) and the
+            % whole block is wrapped so a serial hiccup can never abort the
+            % trial. A dropped echo is a non-event. With old firmware that
+            % does not echo, NumBytesAvailable stays 0 and this is a no-op.
+            try
+                [echoBuf,echoRecs] = drainStimEcho(portArduino,echoBuf);
+                for er = 1:size(echoRecs,1)
+                    legNum   = echoRecs(er,1);
+                    ardStep  = echoRecs(er,2);
+                    stimMs   = echoRecs(er,3);
+                    toRefMs  = echoRecs(er,4);
+                    estSSms  = echoRecs(er,5);
+                    dtStimMs = stimMs - toRefMs; % elapsed into single stance
+                    if legNum == 1     % left pulse: single stance L
+                        matStep = RstepCount;
+                        durSSms = durSSL; % most recent measured (ms)
+                    else               % right pulse: single stance R
+                        matStep = LstepCount;
+                        durSSms = durSSR;
+                    end
+                    pctSS = 100 * dtStimMs / durSSms;
+                    datlog.stim.deviceEcho.data(end+1,:) = [legNum ...
+                        ardStep matStep stimMs toRefMs estSSms ...
+                        dtStimMs durSSms pctSS];
+                    reportStimPctSS(legNum,ardStep,pctSS);
+                end
+            catch ME
+                datlog.errormsgs{end+1} = ['Stim echo drain error: ' ...
+                    ME.message];
+            end
+
             % use contralateral leg (i.e., LHS - LTO) to determine R mid-single stance
             timeSinceLTO = now() - LTOTime(LstepCount);
             if isnan(stimInterval)
