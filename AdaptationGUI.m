@@ -88,7 +88,7 @@ firstPress = false;
 global feedbackFlag
 feedbackFlag = 0;
 global tone
-load(fullfile('assets', 'click.mat'))
+load(fullfile('assets', 'click.mat'));
 tone = y;
 global lastKeyPress
 lastKeyPress = now;
@@ -284,7 +284,7 @@ feedbackFlag = handles.feedbackBox.Value;
 set(handles.Status_textbox, 'String', 'Loading...');
 set(handles.Status_textbox, 'BackgroundColor', 'Yellow');
 
-load(profilename)
+load(profilename);
 forceThreshold = 30;
 set(handles.Status_textbox, 'String', 'Busy...');
 set(handles.Status_textbox, 'BackgroundColor', 'Yellow');
@@ -309,12 +309,12 @@ if get(handles.EMGWorks_checkbox, 'Value') == 1
         %           pause(3);
     end
 
-    disp(['Opening EMGWorks Port ' datestr(datetime('now'))])
     ss = serial('COM14');
     fopen(ss);
     pause(0.1);
     fclose(ss);
-    disp(['Done Opening EMGWorks Port ' datestr(datetime('now'))])
+    disp(['Opening EMGWorks Port ' datestr(datetime('now'))]);
+    disp(['Done Opening EMGWorks Port ' datestr(datetime('now'))]);
 
     %     %Do something
     %     startedEMG_flag=true;
@@ -362,12 +362,12 @@ if get(handles.Nexus_checkbox, 'Value') == 1
     %      %MOnitor in Nexus watched for pulse to toggle start/stop.
     %      %use orange wire out of serial port to pin 64 on AD board
 
-    disp(['Opening Vicon Port ' datestr(datetime('now'))])
     s = serial('COM1'); % vicon
     fopen(s);
     pause(0.1);
     fclose(s); % pulses the voltage high then low, toggling capture in Nexus
-    disp(['Done Opening Vicon Port ' datestr(datetime('now'))])
+    disp(['Opening Vicon Port ' datestr(datetime('now'))]);
+    disp(['Done Opening Vicon Port ' datestr(datetime('now'))]);
     %
     if get(handles.waitForNexusChkBox, 'Value') == 1 && ...
             get(handles.EMGWorks_checkbox, 'Value') == 0
@@ -398,13 +398,13 @@ if get(handles.Nexus_checkbox, 'Value') == 1
     delete(ll);
 
     % Give some time between Nexus start and treadmill start
-    pause(0.1)
+    pause(0.1);
 
 end
 
 % switch between the available functions to call
-aux = regexp(profilename, '\');
-shortName = profilename(aux(end)+1:end-4);
+sepIdx = regexp(profilename, '\');
+shortName = profilename(sepIdx(end)+1:end-4);
 switch(selection)
 
     case 1 % control speed with steps
@@ -439,12 +439,12 @@ switch(selection)
         mode = 4; % Closed-loop control
         % Requires two global function handles to be defined:
         [calibFilename, ~, ~] = uigetfile('*.*');
-        load(calibFilename)
+        load(calibFilename);
         if ~exist('paramComputeFunc', 'var') || ...
                 ~exist('paramCalibFunc', 'var') || ...
                 ~isa(paramComputeFunc, 'function_handle') || ...
                 ~isa(paramCalibFunc, 'function_handle')
-            error('paramComputeFunc or paramCalibFunc are not defined.')
+            error('paramComputeFunc or paramCalibFunc are not defined.');
         end
         [RTOTime, LTOTime, RHSTime, LHSTime, commSendTime, ...
             commSendFrame] = controlSpeedWithSteps_selfSelect( ...
@@ -479,9 +479,10 @@ switch(selection)
         listofss(listofss == 1500) = [];
         listofss(listofss == 1250) = [];
         disp('Selected Speeds: ');
-        listofss = unique(listofss)
+        listofss = unique(listofss);
+        disp(listofss);
         disp('mean selected speed: ');
-        mean(listofss)./1000
+        disp(mean(listofss)./1000);
 
     case 7 % Perceptual trial: ends on click; length set by strides
         mode = 1;
@@ -573,18 +574,18 @@ switch(selection)
         disp(alphaRstd);
         disp('the stdev e L leg is:');
         disp(alphaLstd);
-        disp('X mean R leg')
-        disp(XmeanR)
-        disp('X mean L leg')
-        disp(XmeanL)
-        disp('Ratio R leg with X@LHS')
-        disp(RatioXmeanR')
-        disp('Ratio L leg with X@RHS')
-        disp(RatioXmeanL)
-        disp('R scale with X')
-        disp(RsciX)
-        disp('L scale with X')
-        disp(LsciX)
+        disp('X mean R leg');
+        disp(XmeanR);
+        disp('X mean L leg');
+        disp(XmeanL);
+        disp('Ratio R leg with X@LHS');
+        disp(RatioXmeanR');
+        disp('Ratio L leg with X@RHS');
+        disp(RatioXmeanL);
+        disp('R scale with X');
+        disp(RsciX);
+        disp('L scale with X');
+        disp(LsciX);
 
     case 13
         disp('NBackOG Protocol');
@@ -605,13 +606,13 @@ switch(selection)
             'ListString', trialOptions, 'SelectionMode', 'single', ...
             'ListSize', [300, 150]);
         if isempty(currTrial)
-            error('Invalid selection. Try again.')
+            error('Invalid selection. Try again.');
         else
             confirmTrial = questdlg(sprintf( ...
                 'You selected: %s.\n Is this correct?', ...
                 trialOptions{currTrial}));
             if ~strcmp(confirmTrial, 'Yes')
-                error('Invalid selection. Try again.') % Abort the trial
+                error('Invalid selection. Try again.'); % Abort the trial
             end
         end
         % offset the input by 2 so the familiarization is -1 and 0
@@ -623,7 +624,7 @@ switch(selection)
     case 14 % open-loop NIRS logging; Arduino stim every 10 strides
         % (stim cadence set inside the controller); optionally has timed
         % rest breaks; event timing auto-generated from velL and velR.
-        disp('Short Split Train Nirs Protocol')
+        disp('Short Split Train Nirs Protocol');
         global numAudioCountDown % default [-1] (Shuqi 1/19/2022)
         global isCalibration % default false, not calibration (SL 5/7/2024)
         if exist('stimL', 'var') && exist('stimR', 'var')
@@ -668,11 +669,11 @@ if startedEMG_flag
     %     XServer.AppActivate('EMGworks 4.0.13 - Workflow Environment Pro'); %Get EMG in front
     %     XServer.SendKeys('^s'); %Stop acquisition
     %     XServer.AppActivate('AdaptationGUI'); %This window
-    disp(['Stopping EMG Port ' datestr(datetime('now'))])
     fopen(ss);
     pause(0.1);
     fclose(ss);
-    disp(['Done Stopping EMG Port ' datestr(datetime('now'))])
+    disp(['Stopping EMG Port ' datestr(datetime('now'))]);
+    disp(['Done Stopping EMG Port ' datestr(datetime('now'))]);
 end
 if startedNexus_flag
     %     XServer.AppActivate('Vicon Nexus 1.8.5');
@@ -687,11 +688,11 @@ if startedNexus_flag
     %       stopmsg=['<?xml version="1.0" encoding="UTF-8" standalone="no" ?><CaptureStop RESULT="SUCCESS"><Name VALUE="Trial' num2str(TrialNum) '"/><DatabasePath VALUE="' nexuspath '\"/><Delay VALUE="0"/><PacketID VALUE="' num2str(TrialNum*10) '"/></CaptureStop>']; %311
     %       step(myudp,int8(stopmsg));
     %
-    disp(['Closing Vicon Port ' datestr(datetime('now'))])
     fopen(s);
     pause(0.1);
     fclose(s);
-    disp(['Done Closing Vicon Port ' datestr(datetime('now'))])
+    disp(['Closing Vicon Port ' datestr(datetime('now'))]);
+    disp(['Done Closing Vicon Port ' datestr(datetime('now'))]);
 end
 
 set(handles.Status_textbox, 'String', 'Ready');
@@ -962,7 +963,7 @@ set(handles.Status_textbox, 'String', 'Plotting');
 set(handles.Status_textbox, 'BackgroundColor', 'Yellow');
 pause(0.25);
 
-[d, n, e] = fileparts(which(mfilename()));
+[d, ~, ~] = fileparts(which(mfilename()));
 [ff, dd, ~] = uigetfile([d '\profiles\']);
 profilename = [dd ff];
 try
@@ -970,7 +971,7 @@ try
 
     t = [0:length(velL)-1];
 
-    set(handles.profileaxes, 'NextPlot', 'replace')
+    set(handles.profileaxes, 'NextPlot', 'Replace');
     plot(handles.profileaxes, t, velL, 'b', t, velR, 'r', ...
         'LineWidth', 2);
     if isrow(velL) && isrow(velR)
@@ -982,8 +983,8 @@ try
 
     xlabel('Stride Count');
     ylabel('Speed (m/s)');
-    legend('Left Foot', 'Right Foot', 'AutoUpdate', 'off');
-    set(handles.profileaxes, 'NextPlot', 'add')
+    legend('Left Foot', 'Right Foot', 'AutoUpdate', 'Off');
+    set(handles.profileaxes, 'NextPlot', 'Add');
 
     set(handles.Status_textbox, 'String', 'Ready');
     set(handles.Status_textbox, 'BackgroundColor', 'Green');
@@ -1131,12 +1132,12 @@ if enableMemory && isAllowed && keyWasReleased
                 memory = memory - e;
                 RFBClicker = 0;
                 LFBClicker = 1;
-                display('LeftClick')
+                disp('LeftClick');
             case {'rightarrow', 'numpad6', 'pagedown'}
                 memory = memory + e;
                 RFBClicker = 1;
                 LFBClicker = 0;
-                display('RightClick')
+                disp('RightClick');
         end
     else % firstpress=true
         firstPress = false; % firstPress=false; MGR and KF 02/18/2022
