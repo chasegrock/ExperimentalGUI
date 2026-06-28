@@ -281,13 +281,11 @@ PAUSE = false;
 global feedbackFlag
 feedbackFlag = handles.feedbackBox.Value;
 
-set(handles.Status_textbox, 'String', 'Loading...');
-set(handles.Status_textbox, 'BackgroundColor', 'Yellow');
+setStatus(handles, 'Loading...', 'Yellow');
 
 load(profilename);
 forceThreshold = 30;
-set(handles.Status_textbox, 'String', 'Busy...');
-set(handles.Status_textbox, 'BackgroundColor', 'Yellow');
+setStatus(handles, 'Busy...', 'Yellow');
 
 %Start capture Nexus & EMGWorks?
 % XServer=actxserver('WScript.Shell');
@@ -686,8 +684,7 @@ if startedNexus_flag
     disp(['Done Closing Vicon Port ' datestr(datetime('now'))]);
 end
 
-set(handles.Status_textbox, 'String', 'Ready');
-set(handles.Status_textbox, 'BackgroundColor', 'Green');
+setStatus(handles, 'Ready', 'Green');
 
 % increment Trial # upon completion of Callback
 % TrialNum = TrialNum+1;
@@ -743,15 +740,13 @@ PAUSE = get(hObject, 'Value');
 if PAUSE == 0
     set(handles.Pause_togglebutton, 'String', 'Pause');
     % refreshes the status to what it was before pause
-    set(handles.Status_textbox, 'String', currentstring);
-    set(handles.Status_textbox, 'BackgroundColor', currentcolor);
+    setStatus(handles, currentstring, currentcolor);
     set(handles.Execute_button, 'Enable', 'On');
 else
     currentstring = get(handles.Status_textbox, 'String');
     currentcolor = get(handles.Status_textbox, 'BackgroundColor');
     set(handles.Pause_togglebutton, 'String', 'Resume');
-    set(handles.Status_textbox, 'String', 'Paused');
-    set(handles.Status_textbox, 'BackgroundColor', 'Yellow');
+    setStatus(handles, 'Paused', 'Yellow');
 
     % disable execute button so it can't be pressed again, causing a crash
     set(handles.Execute_button, 'Enable', 'Off');
@@ -815,8 +810,7 @@ global listbox
 
 savename = get(handles.SaveAs_textbox, 'String');
 
-set(handles.Status_textbox, 'String', 'Saving...');
-set(handles.Status_textbox, 'BackgroundColor', 'Yellow');
+setStatus(handles, 'Saving...', 'Yellow');
 
 if isempty(savename) == 1
     savename = 'HEY_YOU_FORGOT_TO_NAME_THIS_FIX_IT';
@@ -826,8 +820,7 @@ end
 save(savename, 'listbox');
 % save savename;
 
-set(handles.Status_textbox, 'String', 'Ready');
-set(handles.Status_textbox, 'BackgroundColor', 'Green');
+setStatus(handles, 'Ready', 'Green');
 guidata(hObject, handles);
 
 % --- Executes on button press in HideLog_checkbox.
@@ -950,8 +943,7 @@ global profilename
 % stop(flasher);
 % delete(flasher);
 
-set(handles.Status_textbox, 'String', 'Plotting');
-set(handles.Status_textbox, 'BackgroundColor', 'Yellow');
+setStatus(handles, 'Plotting', 'Yellow');
 pause(0.25);
 
 [d, ~, ~] = fileparts(which(mfilename()));
@@ -977,8 +969,7 @@ try
     legend('Left Foot', 'Right Foot', 'AutoUpdate', 'Off');
     set(handles.profileaxes, 'NextPlot', 'Add');
 
-    set(handles.Status_textbox, 'String', 'Ready');
-    set(handles.Status_textbox, 'BackgroundColor', 'Green');
+    setStatus(handles, 'Ready', 'Green');
     set(handles.totalLstepsBox, 'String', num2str(length(velL)));
     set(handles.totalRstepsBox, 'String', num2str(length(velL)));
     clear velL velR;
@@ -1259,6 +1250,24 @@ feedbackFlag = hObject.Value;
 % ============================================================
 % ===================== Helper Functions =====================
 % ============================================================
+
+% --- Set the status textbox text and background color together.
+function setStatus(handles, str, color)
+%SETSTATUS Update the status textbox string and background color.
+%
+%   Factors the recurring pair of set calls that drive the status
+%   readout so a caller updates both fields in a single line.
+%
+% Inputs:
+%   handles - structure with handles and user data (see GUIDATA)
+%   str - status text to display
+%   color - background color name or RGB triplet
+%
+% Toolbox Dependencies:
+%   None
+
+set(handles.Status_textbox, 'String', str);
+set(handles.Status_textbox, 'BackgroundColor', color);
 
 % --- Pulse a serial port to toggle a capture device.
 function pulseSerialPort(comPort)
