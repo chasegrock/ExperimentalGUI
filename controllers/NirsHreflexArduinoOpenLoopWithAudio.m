@@ -1041,3 +1041,78 @@ catch ME
 end
 
 end
+
+%% Local Functions
+
+function [bufOut,recs] = drainStimEcho(port,bufIn)
+%DRAINSTIMECHO Non-blocking read of Arduino stim-echo records.
+%
+%   Reads only the bytes already waiting in the serial input buffer (it
+%   never blocks), appends them to any partial line carried over from the
+%   previous call, and delegates record extraction to PARSESTIMECHO. With
+%   firmware that does not echo, NumBytesAvailable stays 0 and this returns
+%   immediately with no records, so the controller degrades cleanly.
+%
+% Inputs:
+%   port - open serialport object connected to the Arduino
+%   bufIn - partial line text left over from the previous call
+%
+% Outputs:
+%   bufOut - partial line text to carry into the next call
+%   recs - Px5 numeric array, one row per parsed pulse:
+%          [leg(1=L,2=R), ardStep, stimMs, toRefMs, estSSms]
+%
+% Toolbox Dependencies: None
+%
+% See also PARSESTIMECHO, NIRSHREFLEXARDUINOOPENLOOPWITHAUDIO.
+
+nAvail = port.NumBytesAvailable;
+if nAvail == 0      % nothing waiting (also the no-echo-firmware no-op path)
+    bufOut = bufIn;
+    recs = zeros(0,5);
+    return;
+end
+[bufOut,recs] = parseStimEcho([bufIn char(read(port,nAvail,'char'))]);
+
+end
+
+function reportStimPctSS(legNum,ardStep,pctSS)
+%REPORTSTIMPCTSS Print the device-echoed actual %-single-stance per stim.
+%
+%   Surfaces, on the console, where the Arduino actually delivered a pulse
+%   relative to single stance so the experimenter can spot gross timing
+%   errors online. Values outside the target window are flagged;
+%   physically impossible values (<0 or >100) signal an echo/event
+%   matching problem rather than a real out-of-tolerance stim.
+%
+% Inputs:
+%   legNum - 1 = left, 2 = right
+%   ardStep - Arduino-side step counter for the pulse
+%   pctSS - actual stim point as a percentage of single stance
+%
+% Outputs:
+%   None
+%
+% Toolbox Dependencies: None
+%
+% See also NIRSHREFLEXARDUINOOPENLOOPWITHAUDIO.
+
+pctTargetSS    = 50; % target stim point (% of single stance)
+pctToleranceSS = 5;  % acceptance half-window (%) for the online check
+if legNum == 1
+    legStr = 'L';
+else
+    legStr = 'R';
+end
+
+if pctSS < 0 || pctSS > 100
+    fprintf(['Stim %s step %d: %.1f%% SS (out of range; check echo/' ...
+        'event matching)\n'],legStr,ardStep,pctSS);
+elseif abs(pctSS - pctTargetSS) > pctToleranceSS
+    fprintf('Stim %s step %d: %.1f%% SS (OUTSIDE %d+/-%d%%)\n', ...
+        legStr,ardStep,pctSS,pctTargetSS,pctToleranceSS);
+else
+    fprintf('Stim %s step %d: %.1f%% SS\n',legStr,ardStep,pctSS);
+end
+
+end
