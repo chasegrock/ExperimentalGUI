@@ -1,8 +1,10 @@
 %RUNPROTOCOL_SPINALADAPTBOUTS Automate the SpinalAdapt experimental session.
 %
-%   TEMPLATE — Pilot Study 2 structure preserved as the starting point for
-%   the next protocol. New-protocol conditions and ramp logic have not yet
-%   been designed. See History-PilotStudy2/ for the archived original.
+%   TEMPLATE — Updated with new SpinalAdapt protocol structure:
+%   16 conditions (2 TM + 2 OG baselines, 1 control bouts, 8 split
+%   bouts trials, 1 control bouts repeat, 2 post-adapt). Verify all
+%   conditions and the subjectID skip logic before data collection.
+%   See History-PilotStudy2/ for the Pilot Study 2 original.
 %
 %   Guides the experimenter through profile generation, pre- and post-
 %   session H-reflex calibration trials, all conditions in sequence, and
