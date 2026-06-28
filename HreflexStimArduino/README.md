@@ -75,6 +75,74 @@ Baud rate: **115200**. Both `LogForcesArduinoSerial.m` and the SpinalAdapt
 controllers use this rate; no changes are needed on the MATLAB side when
 switching between sketches.
 
+### Device Stim Echo (outbound, SpeedIndependent only)
+
+The inbound `0/1/2/3` command set above is **fixed**. Separately, the
+SpeedIndependent firmware reports each delivered pulse back to MATLAB on an
+**additive outbound channel** as a newline-terminated CSV record:
+
+```
+S,<leg>,<step>,<stimMs>,<toRefMs>,<estSS>
+```
+
+| Field | Meaning |
+|---|---|
+| `S` | Fixed tag so MATLAB can distinguish echoes from other serial output |
+| `leg` | `L` or `R` — the stimulated leg |
+| `step` | Arduino-side ipsilateral step counter at the pulse |
+| `stimMs` | `millis()` time the pulse fired |
+| `toRefMs` | `millis()` of the contralateral toe-off used as the 50% reference |
+| `estSS` | Arduino single-stance estimate at the pulse (ms) |
+
+`NirsHreflexArduinoOpenLoopWithAudio.m` drains these **non-blocking** off its
+control loop (reads only bytes already buffered; a serial hiccup is caught and
+ignored — a dropped echo is a non-event) and appends one row per pulse to
+`datlog.stim.deviceEcho.data`. From `stimMs − toRefMs` (elapsed time into single
+stance) over the MATLAB-measured single-stance duration, it computes the actual
+**%-single-stance** per stim and prints it live, flagging anything outside
+50 ± 5%. This echo requires a **matched firmware re-upload**: old firmware
+simply sends nothing and the MATLAB side is a clean no-op.
+
+> **Caveat:** the live %SS mixes an Arduino-detected toe-off (numerator) with a
+> MATLAB-detected single-stance duration (denominator), so it carries a small
+> cross-detector error and is a **gross-error online check**, not the
+> acceptance number. The Vicon analog sync pulse is the gold standard — see
+> "Validating stim timing" below.
+
+---
+
+## Validating Stim Timing (Acceptance Test)
+
+Run this once back in the lab after any firmware re-upload, before participants.
+The **Vicon analog sync pulses** (pins 11/12 → Vicon) mark the exact stim
+instant on the *same clock* as the force-plate gait events, so they are the
+ground truth for the ±5% acceptance criterion.
+
+1. **Re-upload firmware** (the echo is a firmware change): follow "Arduino
+   Upload Workflow" above for
+   `triggerStimWithGaitStateMachine_SpeedIndependent`.
+2. **Bench-check the echo** without walking: open the Arduino IDE Serial Monitor
+   at 115200, send `0`, then `2` (or `1`), and confirm a `S,R,...`/`S,L,...`
+   line appears per gated stride while you hand-press the force plates. Close
+   the Serial Monitor before running MATLAB (only one process can hold the
+   port).
+3. **MATLAB dry run (no participant):** run a short dummy profile with
+   `hreflex_present = true` and the Arduino reading bench force input. Confirm
+   the console prints `Stim L/R step N: ...% SS` lines, that
+   `datlog.stim.deviceEcho.data` is populated, and that
+   `datlog.diagnostics.loopSegMs` per-iteration timing is unchanged versus a run
+   with the echo firmware absent (the drain must add no measurable hot-path
+   latency).
+4. **Representative trial:** collect ≥1 trial with a participant (or a walking
+   stand-in). Offline, for each stim compute
+   `100 × (stimVsync − RTO) / (RHS − RTO)` for left (and the LHS/LTO analog for
+   right) using **Vicon** force-plate events and the analog sync-pulse channel,
+   all on the Vicon clock.
+5. **Acceptance:** the Vicon-derived %-single-stance should cluster at
+   **50% ± 5%**. The MATLAB-echoed `pctSS` column should track it within the
+   cross-detector error; large divergence between the two points to a gait-event
+   detection mismatch (threshold/debounce), not a stimulator fault.
+
 ---
 
 ## Hardware Pin Map
@@ -204,11 +272,12 @@ implemented yet; this section is for planning purposes.
    hard-coded constants. Exposing them as serial-configurable parameters would
    allow MATLAB to tune them per participant without re-uploading firmware.
 
-2. **Two-way serial protocol with event echo** — The Arduino currently receives
-   commands from MATLAB but does not report actual stimulation timestamps back.
-   Adding an echo (stride index + actual stim timestamp on each delivery) would
-   let MATLAB verify timing accuracy and align H-reflex events in post-
-   processing without relying solely on the Vicon analog sync trace.
+2. **~~Two-way serial protocol with event echo~~ (implemented)** — On each
+   delivered pulse the SpeedIndependent firmware now echoes a tagged record
+   back to MATLAB (`S,<leg>,<step>,<stimMs>,<toRefMs>,<estSS>`); see "Device
+   stim echo" below. MATLAB drains it non-blocking and logs the actual
+   %-single-stance to `datlog.stim.deviceEcho`. Remaining future work: also use
+   the echoed step/timestamp to align H-reflex events during post-processing.
 
 3. **Mid-experiment gating update** — Currently, MATLAB must send per-stride
    `1`/`2` commands proactively. A mechanism for MATLAB to send a burst of
