@@ -376,6 +376,7 @@ void triggerStimulation()
       isStimmingL  = true;
       // canStimL = false;
       shouldStimL = false; // reset trigger for next cycle
+      echoStimRecord('L', numStepsL, timeStimStartL, timeRTO, estSSL);
     }
   }
 
@@ -396,8 +397,39 @@ void triggerStimulation()
       isStimmingR  = true;
       // canStimR = false;
       shouldStimR = false; // reset trigger for next cycle
+      echoStimRecord('R', numStepsR, timeStimStartR, timeLTO, estSSR);
     }
   }
+}
+
+// -------------------------- Stim Echo (Outbound) --------------------
+// Echo one delivered-pulse record to MATLAB as timing ground truth.
+// This is an ADDITIVE OUTBOUND channel only: it does not touch the
+// inbound 0/1/2/3 command protocol, the baud rate, the pins, or the
+// trigger logic. Format (one newline-terminated CSV record):
+//   S,<leg>,<step>,<timeStimStart>,<timeTORef>,<estSS>
+// where leg is 'L' or 'R', step is the ipsilateral step counter,
+// timeStimStart is the millis() time the pulse fired, timeTORef is the
+// contralateral toe-off millis() reference used for the 50% target, and
+// estSS is the current single-stance estimate (ms). The leading "S,"
+// tag lets MATLAB tell these apart from any other serial output. The
+// pin already went HIGH before this call and the pulse is turned off by
+// the time-based handleStimulationTimeout(), so the few hundred
+// microseconds this print buffers into the UART FIFO do not affect
+// pulse timing. MATLAB drains these non-blocking, off its control loop.
+void echoStimRecord(char leg, int step, unsigned long timeStimStart,
+                    unsigned long timeTORef, float estSS)
+{
+  Serial.print("S,");
+  Serial.print(leg);
+  Serial.print(",");
+  Serial.print(step);
+  Serial.print(",");
+  Serial.print(timeStimStart);
+  Serial.print(",");
+  Serial.print(timeTORef);
+  Serial.print(",");
+  Serial.println(estSS, 1); // 1 decimal place is ample for a ms estimate
 }
 
 // -------------------------- Stimulation Timeout ---------------------
