@@ -143,6 +143,17 @@ may adopt H-reflex measurement later. See
 [HreflexMwaveMonitor/README.md](HreflexMwaveMonitor/README.md) for
 phase status, file list, and validation results.
 
+**H-reflex electrode placement:** before the walking calibrations,
+the bar electrode's site over the tibial nerve is found once per leg
+with `HreflexMappingTool` (repo root, `HreflexMappingTool/`). It runs
+in a MATLAB instance of its own and fires single DS8R pulses through
+the Digitimer COM API (not the Arduino). It plots TA and Soleus EMG
+for a Center site and for sites moved left, up, right, and down, with
+automatic M-wave/H-reflex peaks and latencies, and logs every trial to
+`<Leg>NerveLocalization/`. See
+[HreflexMappingTool/README.md](HreflexMappingTool/README.md) for the
+procedure, outputs, and open lab checks.
+
 ---
 
 ## Controller Reference
@@ -290,10 +301,12 @@ three MATLAB path roots are listed in
 `AdaptationGUI.m`/`.fig`, everything under `controllers/`, `studies/`,
 and `+utils/`, the top-level helpers (`FindKinHS`, `FindKinTO`,
 `smoothStop`, `parseEventsFromSpeeds`, `manualLoadProfile`, `nirsEvent`,
-the `generate*EventString` helpers, `NBackHelper`, `ISIRandMethod`), and
-the `HreflexStimArduino/` firmware. Edits here are subject to the
-per-study stability rules above (BrainWalk logic frozen; C3 and
-SpinalAdapt require coordination with the lead experimenter).
+the `generate*EventString` helpers, `NBackHelper`, `ISIRandMethod`), the
+standalone H-reflex tools in `HreflexMwaveMonitor/` and
+`HreflexMappingTool/`, and the `HreflexStimArduino/` firmware. Edits
+here are subject to the per-study stability rules above (BrainWalk
+logic frozen; C3 and SpinalAdapt require coordination with the lead
+experimenter).
 
 ### Fixed external interfaces (do not edit here; change upstream)
 
@@ -304,6 +317,7 @@ SpinalAdapt require coordination with the lead experimenter).
 | Bertec treadmill comm layer | `C:\Users\Public\Documents\MATLAB\HMRLhardware\TreadmillInterface\` (lab PC) | `getPayload`, `sendTreadmillPacket`, `readTreadmillPacket`, `openTreadmillComm`, `getCurrentData` |
 | labTools post-processing | `C:\Users\cntctsml\Documents\GitHub\labTools\` | `dataMotion.processAndFillMarkerGapsSession`, `dataMotion.exportSessionToC3D` |
 | Artinis Oxysoft (fNIRS) COM API | installed application | `actxserver('OxySoft.OxyApplication')` |
+| Digitimer DS8R COM API | installed DS8R control software | `actxserver('DigitimerDS8R.DS8RController')`, `GetState`, `SetState`, `Trigger` — used only by `HreflexMappingTool` |
 | Arduino H-reflex firmware | running device (source in `HreflexStimArduino/`) | serial `0`/`1`/`2`/`3` handshake |
 
 Changing the treadmill packet contract, the DataStream marker/device
@@ -324,6 +338,9 @@ toolbox). The exceptions:
   `NBackHelper`), which use `histfit` and `normrnd`.
 - **Instrument Control Toolbox** — only the legacy `serial()` COM paths
   in `AdaptationGUI` use it; the active `serialport` API does not.
+- **Signal Processing Toolbox** — optional for `HreflexMappingTool`'s
+  10–500 Hz display band-pass (`butter`/`filtfilt`); without it the
+  tool falls back to DC removal and warns.
 
 ### Unverified / risk
 

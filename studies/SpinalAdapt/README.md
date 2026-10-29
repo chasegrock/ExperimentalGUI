@@ -741,6 +741,26 @@ verify all parameters against the final approved protocol before collection.
 | `runWalkingCalibrations.m` | Active | H-reflex walking calibration helper |
 | `transferData_SpinalAdaptBouts.m` | Active | Data transfer and archival |
 
+## H-Reflex Electrode Placement
+
+At the start of each visit, before the H-reflex walking calibrations,
+find the stimulating bar electrode's site over each leg's tibial nerve
+with
+[`HreflexMappingTool`](../../HreflexMappingTool/README.md) (repo root).
+Run it once per leg, in a MATLAB instance separate from the one
+running `RunProtocol_SpinalAdaptBouts`. It fires single DS8R pulses
+through the Digitimer COM API, so no controller should be stimulating
+while it runs. When prompted for a parent folder, choose this visit's
+Vicon Nexus folder
+(`...\SpinalAdaptStudy\<participant ID>\Visit0N`). Each visit's
+`LeftNerveLocalization/` and `RightNerveLocalization/` logs and Center
+figures then stay with that visit, and `transferData_SpinalAdaptBouts`
+copies them to the server with the rest of that folder (under
+`Data\<ID>\Visit0N\Vicon\`). The tool leaves the DS8R output disabled
+and its `Demand`/`PulseWidth`/`DemandLimit` settings changed. Check
+both DS8Rs and re-enable their output before the calibrations. See that
+folder's README for the procedure, outputs, and open lab checks.
+
 ## H-Reflex M-Wave Monitor
 
 A near-real-time M-wave monitor helps the experimenter hold each leg's

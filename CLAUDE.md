@@ -193,6 +193,24 @@ correction is a population statistic. See
 `HreflexMwaveMonitor/README.md` for phase status, file list, and
 real-data validation results.
 
+**H-reflex mapping tool** — `HreflexMappingTool/HreflexMappingTool.m`
+(repo root; a single script with local functions, no namespace) finds
+the bar-electrode site over the tibial nerve: per site (Center / Left
+/ Up / Right / Down) it fires one DS8R pulse through the Digitimer COM
+API, detects the artifact on raw TA EMG (there is no sync channel),
+and plots TA and Soleus with automatic M-wave/H-reflex peaks and
+latencies in a plus-shaped figure layout. Used in SpinalAdapt once per
+leg each visit, before the walking calibrations, but kept
+study-agnostic. Run it in its **own MATLAB instance** (it starts with
+`clearvars; close all`); it never touches the Arduino serial port or
+`datlog`. Keep its safety rules: confirm dialog with no default button,
+a software current cap, and DS8R output disabled between trials and on
+any exit (its session runs in a local function so `onCleanup` fires on
+error/Ctrl+C). Its CSV columns and MAT `trials`/`session` fields are a
+saved format — keep them stable. Claude cannot run its Vicon/DS8R
+path, so every change needs lab verification. See
+`HreflexMappingTool/README.md`.
+
 **NirsAutomaticityProtocol**, **Perceptual Adaptation**, and **Weber
 Perception** — completed; consult the lead experimenter (see
 EXPERIMENT_SETUP.md for study leads) before modifying scripts in these

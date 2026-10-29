@@ -87,6 +87,9 @@ studies/                    Protocol scripts for individual experiments
   Weber Perception/         Completed — perceptual discrimination thresholds
 +utils/                     Utility functions (data transfer, speed extraction)
 HreflexStimArduino/         Arduino H-reflex stimulation interface
+HreflexMappingTool/         Live H-reflex electrode-placement (nerve
+                            localization) tool, DS8R via COM
+HreflexMwaveMonitor/        Near-real-time H-reflex M-wave monitor
 assets/                     Audio and data assets loaded by AdaptationGUI at startup
 archive/                    Inactive / legacy files (old GUI snapshots,
                             unused scripts, MEX build sources)
