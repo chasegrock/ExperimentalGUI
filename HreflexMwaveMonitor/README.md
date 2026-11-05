@@ -40,7 +40,7 @@ Subfolders" from the repo root, run once and saved); confirm
 
 | File | Phase | Purpose |
 |---|---|---|
-| `+hreflexMonitor/probeViconDataStreamDevices.m` | 0 | Read-only DataStream device/output enumeration — run this first in the lab to confirm EMG + `Stimulator_Trigger_Sync_*` are exposed live (not just in the C3D) before relying on a live source in a later phase. |
+| `+hreflexMonitor/probeViconDataStreamDevices.m` | 0 | Read-only DataStream device/output/component enumeration, with per-channel subsample counts and signal statistics — run this first in the lab (Nexus in Live mode, `HreflexEMGDataCollection` profile selected, firing stimuli) to confirm EMG + `Stimulator_Trigger_Sync_*` are exposed live (not just in the C3D) before relying on a live source in a later phase. |
 | `+hreflexMonitor/detectStimArtifactOnline.m` | 1 | Causal, streaming re-implementation of `Hreflex.extractStimArtifactIndsFromTrigger`'s onset/artifact-peak detection (largest absolute deflection in the window; see Artifact Localization Rule below). |
 | `+hreflexMonitor/stepHreflexMonitor.m` | 1-2 | Per-chunk pipeline step: buffers EMG, calls the detector, and — once each stim's full snippet window has arrived — recomputes M-/H-wave/noise amplitudes over the *entire accumulated snippet set* via `Hreflex.computeAmplitudes` (required for exact parity with the offline batch statistic), and re-derives which peak/trough sample indices that computation used (`state.mWaveInds`) so a caller's marker matches the displayed, possibly outlier-corrected, amplitude. |
 | `+hreflexMonitor/hreflexSourceReplayC3D.m` | 1 | Loads a prior H-reflex trial C3D (via BTK) for replay validation. |
@@ -140,12 +140,17 @@ negative-dominant fixture whose artifact sits below the old 1 mV gate.
   call. Deferred as a bigger structural change (two independent
   pipeline states/figures, per-leg baseline prompts) rather than
   bundled into this pass.
-- `probeViconDataStreamDevices.m`'s DataStream SDK enumeration calls
-  (`GetDeviceCount`, `GetDeviceName`, `GetDeviceOutputCount`,
-  `GetDeviceOutputName`) are standard v1.11.0 SDK methods but still
-  have not been exercised against a *live* stream (only the offline
-  BTK/C3D path has real-data coverage so far) — run this first in the
-  lab.
+- `probeViconDataStreamDevices.m` has not been run against a *live*
+  stream (only the offline BTK/C3D path has real-data coverage so far)
+  — run this first in the lab. Its connection, device wait, subsample
+  count, and value read mirror `HreflexMappingTool`'s live EMG path,
+  but its enumeration calls (`GetDeviceName`, `GetDeviceOutputCount`,
+  `GetDeviceOutputComponentName`) are used nowhere else in this
+  repository, and their zero-based indexing is inferred from the same
+  client's other calls. `report.indexFailures` or a warning at the end
+  of its output flags a wrong assumption. Its CPU load alongside the
+  control loop is also unmeasured, so run it without a control instance
+  first.
 - `promptHreflexMuscle.m` and `promptHreflexBaseline.m`'s interactive
   dialogs (`listdlg`, `inputdlg`) are untested interactively (every
   automated test passes `muscle`/`baselineMwaveMv` explicitly to
